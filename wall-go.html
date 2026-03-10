@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>壁囲碁 - Wall Go</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', 'Meiryo', 'Yu Gothic', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin: 16px 0 4px;
+      color: #f0c040;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+
+    h1 small {
+      font-size: 0.7rem;
+      color: #aaa;
+      letter-spacing: 1px;
+    }
+
+    #app {
+      width: 100%;
+      max-width: 720px;
+      padding: 0 12px 24px;
+    }
+
+    /* Setup */
+    #setup {
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    #setup h2 {
+      font-size: 1.2rem;
+      margin-bottom: 24px;
+      color: #ccc;
+    }
+
+    .mode-btn {
+      display: inline-block;
+      margin: 8px 12px;
+      padding: 16px 36px;
+      font-size: 1.1rem;
+      border: 2px solid #f0c040;
+      border-radius: 12px;
+      background: transparent;
+      color: #f0c040;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-btn:hover {
+      background: #f0c040;
+      color: #1a1a2e;
+    }
+
+    /* Game */
+    #game {
+      display: none;
+    }
+
+    #status-bar {
+      text-align: center;
+      margin: 8px 0 12px;
+      padding: 10px 16px;
+      background: #16213e;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .p-dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 4px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .phase {
+      color: #f0c040;
+      font-weight: bold;
+    }
+
+    /* Board */
+    #board-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      margin: 0 auto;
+    }
+
+    #row-labels {
+      display: flex;
+      flex-direction: column;
+      margin-right: 4px;
+    }
+
+    #row-labels span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: #888;
+      font-weight: bold;
+    }
+
+    #col-labels {
+      display: flex;
+    }
+
+    #col-labels span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: #888;
+      font-weight: bold;
+    }
+
+    #board-outer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #board {
+      display: grid;
+      background: #8B6914;
+      border: 4px solid #5a4510;
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .cell {
+      background: #c4975a;
+      border-radius: 3px;
+      position: relative;
+      cursor: default;
+      transition: background 0.15s;
+    }
+
+    .cell:hover {
+      background: #d4a76a;
+    }
+
+    .cell.highlight {
+      background: #ffeaa7;
+      cursor: pointer;
+    }
+
+    .cell.highlight:hover {
+      background: #fff3b0;
+    }
+
+    .cell.territory-0 {
+      background: rgba(231, 76, 60, 0.3);
+    }
+
+    .cell.territory-1 {
+      background: rgba(52, 152, 219, 0.3);
+    }
+
+    .piece {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 2px solid rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+      z-index: 5;
+      transition: all 0.15s;
+    }
+
+    .piece.selectable {
+      cursor: pointer;
+      animation: pulse 1.5s infinite;
+    }
+
+    .piece.selected {
+      box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.6);
+      transform: translate(-50%, -50%) scale(1.12);
+    }
+
+    .piece.ghost {
+      opacity: 0.3;
+      box-shadow: none;
+      z-index: 3;
+      animation: none;
+    }
+
+    .cell.cpu-from {
+      background: rgba(52, 152, 219, 0.25);
+    }
+
+    .cell.cpu-to {
+      background: rgba(52, 152, 219, 0.4);
+    }
+
+    .wall-h.cpu-wall,
+    .wall-v.cpu-wall {
+      background: #f0c040;
+      box-shadow: 0 0 8px rgba(240, 192, 64, 0.6);
+    }
+
+    .cell.cpu-placed {
+      background: rgba(52, 152, 219, 0.4);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+      }
+
+      50% {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 10px 3px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    .wall-h,
+    .wall-v {
+      background: transparent;
+      cursor: default;
+      transition: background 0.15s;
+      z-index: 2;
+      border-radius: 2px;
+    }
+
+    .wall-h.placed,
+    .wall-v.placed {
+      background: #2d3436;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    .wall-h.available,
+    .wall-v.available {
+      background: rgba(240, 192, 64, 0.3);
+      cursor: pointer;
+    }
+
+    .wall-h.available:hover,
+    .wall-v.available:hover {
+      background: rgba(240, 192, 64, 0.7);
+    }
+
+    .corner {
+      background: #7a5c1e;
+      border-radius: 1px;
+    }
+
+    /* Controls */
+    #controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ctrl-btn {
+      padding: 8px 18px;
+      border: 1px solid #555;
+      border-radius: 8px;
+      background: #16213e;
+      color: #ddd;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn:hover {
+      background: #1f3460;
+      border-color: #777;
+    }
+
+    .ctrl-btn.primary {
+      border-color: #f0c040;
+      color: #f0c040;
+    }
+
+    .ctrl-btn.primary:hover {
+      background: #f0c040;
+      color: #1a1a2e;
+    }
+
+    .ctrl-btn.confirm {
+      border-color: #27ae60;
+      color: #27ae60;
+    }
+
+    .ctrl-btn.confirm:hover {
+      background: #27ae60;
+      color: #fff;
+    }
+
+    /* Score */
+    #score-panel {
+      display: none;
+      margin-top: 12px;
+      padding: 16px;
+      background: #16213e;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    #score-panel h3 {
+      color: #f0c040;
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 6px 0;
+      font-size: 1rem;
+    }
+
+    .score-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .winner {
+      color: #f0c040;
+      font-weight: bold;
+    }
+
+    /* Rules */
+    #rules {
+      display: none;
+      margin-top: 8px;
+      padding: 14px;
+      background: #16213e;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: #bbb;
+    }
+
+    #rules h4 {
+      color: #f0c040;
+      margin: 8px 0 4px;
+    }
+
+    #rules ul {
+      padding-left: 18px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <h1>壁囲碁<br><small>Wall Go — Devil's Plan</small></h1>
+
+    <div id="setup">
+      <h2>Devil's Plan シーズン2 より</h2>
+      <button class="mode-btn" onclick="startGame(false)">2人対戦</button>
+      <div style="margin-top:12px">
+        <span style="color:#aaa;font-size:0.9rem">▼ CPU対戦</span>
+      </div>
+      <button class="mode-btn" onclick="startGame(true,1)">初心者</button>
+      <button class="mode-btn" onclick="startGame(true,2)">中級者</button>
+      <button class="mode-btn" onclick="startGame(true,3)">上級者</button>
+      <div style="text-align:center;margin-top:16px">
+        <button class="ctrl-btn" onclick="toggleRules()">ルール説明</button>
+      </div>
+      <div id="rules">
+        <h4>概要</h4>
+        <p>壁囲碁は駒を移動し壁を設置して、より多くの領域を確保したプレイヤーが勝利する抽象戦略ゲームです。</p>
+        <h4>初期配置</h4>
+        <ul>
+          <li>7×7のボードに赤・青それぞれ2個の駒が事前配置されます</li>
+          <li>先手→後手→後手→先手の順に追加の駒を1個ずつ配置します</li>
+        </ul>
+        <h4>ゲーム進行</h4>
+        <ul>
+          <li>先手と後手が交互にターンを行います</li>
+          <li>各ターンで：
+            <ol style="padding-left:18px">
+              <li>自分の駒1つを1〜2マス移動（上下左右）</li>
+              <li>移動先のマスの隣接する辺に壁を1つ設置</li>
+            </ol>
+          </li>
+          <li>他の駒を通り抜けたり重なることは不可</li>
+          <li>壁を通り抜ける移動も不可</li>
+          <li>2マス移動で1マス進んで元に戻ることも可</li>
+        </ul>
+        <h4>終了条件</h4>
+        <ul>
+          <li>壁により全プレイヤーの領域が完全に分離されたら終了</li>
+          <li>領域が最も広いプレイヤーが勝利</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="game">
+      <div id="status-bar"></div>
+      <div id="board-wrap">
+        <div id="row-labels"></div>
+        <div id="board-outer">
+          <div id="board"></div>
+          <div id="col-labels"></div>
+        </div>
+      </div>
+      <div id="controls"></div>
+      <div id="score-panel"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Constants =====
+    const BS = 7;
+    const CELL_PX = 56, WALL_PX = 8, PIECE_PX = 38;
+    const COLORS = ['#e74c3c', '#3498db'];
+    const NAMES = ['先手（赤）', '後手（青）'];
+    const COL_LABELS = 'ABCDEFG';
+    const CPU_PLAYER = 1;
+    const CPU_DELAY = 500;
+    let cpuMode = false;
+    let cpuLevel = 2; // 1=beginner, 2=intermediate, 3=advanced
+    let cpuTimerId = null;
+    let cpuAnimating = false;
+    let cpuHighlight = null;
+
+    // Initial pre-placed pieces
+    // (x,y) with (1,1)=bottom-left: x goes right, y goes up
+    // Mapping: row=7-y, col=x-1
+    // Red(0): (2,2)→(r5,c1)=B2  (6,6)→(r1,c5)=F6
+    // Blue(1): (2,6)→(r1,c1)=B6  (6,2)→(r5,c5)=F2
+    const INIT_PIECES = [
+      { player: 0, row: 5, col: 1 },
+      { player: 0, row: 1, col: 5 },
+      { player: 1, row: 1, col: 1 },
+      { player: 1, row: 5, col: 5 },
+    ];
+
+    // ===== State =====
+    let G = null;
+
+    function newGame() {
+      return {
+        pieces: INIT_PIECES.map(p => ({ ...p })),
+        hWalls: make2D(BS - 1, BS, false),  // hWalls[r][c]: between row r and r+1 at col c
+        vWalls: make2D(BS, BS - 1, false),  // vWalls[r][c]: between col c and c+1 at row r
+        phase: 'PLACEMENT',
+        placementTurn: 0,   // 0..3
+        gameTurn: 0,
+        selIdx: -1,
+        origR: -1, origC: -1,
+        intR: -1, intC: -1,
+        step2R: -1, step2C: -1,
+        step1Targets: [],
+        step2Targets: [],
+        validWalls: [],
+      };
+    }
+
+    function make2D(rows, cols, val) {
+      return Array.from({ length: rows }, () => Array(cols).fill(val));
+    }
+
+    // ===== Turn Order =====
+    function placementPlayer(turn) { return [0, 1, 1, 0][turn]; }
+    function gamePlayer(turn) { return turn % 2; }
+    function currentPlayer() {
+      return G.phase === 'PLACEMENT' ? placementPlayer(G.placementTurn) : gamePlayer(G.gameTurn);
+    }
+
+    // ===== Board Queries =====
+    function pieceAt(r, c) {
+      return G.pieces.findIndex(p => p.row === r && p.col === c);
+    }
+
+    function hasWallBetween(r1, c1, r2, c2) {
+      const dr = r2 - r1, dc = c2 - c1;
+      if (dr === 1 && dc === 0) return G.hWalls[r1][c1];
+      if (dr === -1 && dc === 0) return G.hWalls[r2][c1];
+      if (dc === 1 && dr === 0) return G.vWalls[r1][c1];
+      if (dc === -1 && dr === 0) return G.vWalls[r1][c2];
+      return true;
+    }
+
+    function adjacentEmpty(r, c) {
+      const res = [];
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nr >= BS || nc < 0 || nc >= BS) continue;
+        if (hasWallBetween(r, c, nr, nc)) continue;
+        if (pieceAt(nr, nc) !== -1) continue;
+        res.push({ r: nr, c: nc });
+      }
+      return res;
+    }
+
+    function getStep1Targets(idx) {
+      return adjacentEmpty(G.pieces[idx].row, G.pieces[idx].col);
+    }
+
+    // Step 2: piece is at (intR,intC), original pos is vacant
+    function getStep2Targets(intR, intC) {
+      const res = [];
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = intR + dr, nc = intC + dc;
+        if (nr < 0 || nr >= BS || nc < 0 || nc >= BS) continue;
+        if (hasWallBetween(intR, intC, nr, nc)) continue;
+        if (pieceAt(nr, nc) !== -1) continue;
+        res.push({ r: nr, c: nc });
+      }
+      return res;
+    }
+
+    function getValidWalls(r, c) {
+      const w = [];
+      if (r < BS - 1 && !G.hWalls[r][c]) w.push({ type: 'h', wr: r, wc: c });
+      if (r > 0 && !G.hWalls[r - 1][c]) w.push({ type: 'h', wr: r - 1, wc: c });
+      if (c < BS - 1 && !G.vWalls[r][c]) w.push({ type: 'v', wr: r, wc: c });
+      if (c > 0 && !G.vWalls[r][c - 1]) w.push({ type: 'v', wr: r, wc: c - 1 });
+      return w;
+    }
+
+    // ===== Territory =====
+    function getComponents() {
+      const vis = make2D(BS, BS, false);
+      const comps = [];
+      for (let r = 0; r < BS; r++) {
+        for (let c = 0; c < BS; c++) {
+          if (vis[r][c]) continue;
+          const cells = [], q = [[r, c]];
+          vis[r][c] = true;
+          while (q.length) {
+            const [cr, cc] = q.shift();
+            cells.push([cr, cc]);
+            for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+              const nr = cr + dr, nc = cc + dc;
+              if (nr < 0 || nr >= BS || nc < 0 || nc >= BS) continue;
+              if (vis[nr][nc] || hasWallBetween(cr, cc, nr, nc)) continue;
+              vis[nr][nc] = true;
+              q.push([nr, nc]);
+            }
+          }
+          comps.push(cells);
+        }
+      }
+      return comps;
+    }
+
+    function checkGameEnd() {
+      for (const comp of getComponents()) {
+        const ps = new Set();
+        for (const [r, c] of comp) {
+          const pi = pieceAt(r, c);
+          if (pi !== -1) ps.add(G.pieces[pi].player);
+        }
+        if (ps.size > 1) return false;
+      }
+      return true;
+    }
+
+    function calcTerritory() {
+      const territory = [0, 0];
+      const cellOwner = make2D(BS, BS, -1);
+      for (const comp of getComponents()) {
+        const ps = new Set();
+        for (const [r, c] of comp) {
+          const pi = pieceAt(r, c);
+          if (pi !== -1) ps.add(G.pieces[pi].player);
+        }
+        const owner = ps.size === 1 ? [...ps][0] : -1;
+        for (const [r, c] of comp) cellOwner[r][c] = owner;
+        if (owner >= 0) territory[owner] += comp.length;
+      }
+      return { territory, cellOwner };
+    }
+
+    // ===== Actions =====
+    function doPlacement(r, c) {
+      if (G.phase !== 'PLACEMENT' || pieceAt(r, c) !== -1) return;
+      G.pieces.push({ player: currentPlayer(), row: r, col: c });
+      G.placementTurn++;
+      if (G.placementTurn >= 4) { G.phase = 'SELECT_PIECE'; G.gameTurn = 0; }
+      render();
+    }
+
+    function doSelectPiece(idx) {
+      if (G.phase !== 'SELECT_PIECE' || G.pieces[idx].player !== currentPlayer()) return;
+      const t = getStep1Targets(idx);
+      if (t.length === 0) return;
+      G.selIdx = idx;
+      G.step1Targets = t;
+      G.phase = 'MOVE_STEP1';
+      render();
+    }
+
+    function doStep1(r, c) {
+      if (G.phase !== 'MOVE_STEP1') return;
+      if (!G.step1Targets.some(t => t.r === r && t.c === c)) return;
+      const p = G.pieces[G.selIdx];
+      G.origR = p.row; G.origC = p.col;
+      p.row = r; p.col = c;
+      G.intR = r; G.intC = c;
+      G.step2Targets = getStep2Targets(r, c);
+      G.validWalls = getValidWalls(r, c);
+      G.phase = 'STEP1_WALL_OR_STEP2';
+      render();
+    }
+
+    function doConfirmStep1() {
+      if (G.phase !== 'STEP1_WALL_OR_STEP2') return;
+      goToWall(G.intR, G.intC);
+    }
+
+    function doStep2(r, c) {
+      if (G.phase !== 'STEP1_WALL_OR_STEP2') return;
+      if (!G.step2Targets.some(t => t.r === r && t.c === c)) return;
+      G.step2R = r; G.step2C = c;
+      G.pieces[G.selIdx].row = r;
+      G.pieces[G.selIdx].col = c;
+      goToWall(r, c);
+    }
+
+    function doPlaceWallFromStep1(type, wr, wc) {
+      if (G.phase !== 'STEP1_WALL_OR_STEP2') return;
+      if (!G.validWalls.some(w => w.type === type && w.wr === wr && w.wc === wc)) return;
+      if (type === 'h') G.hWalls[wr][wc] = true;
+      else G.vWalls[wr][wc] = true;
+      endTurn();
+    }
+
+    function goToWall(r, c) {
+      G.validWalls = getValidWalls(r, c);
+      if (G.validWalls.length === 0) { endTurn(); } // extremely rare
+      else { G.phase = 'PLACE_WALL'; render(); }
+    }
+
+    function doPlaceWall(type, wr, wc) {
+      if (G.phase !== 'PLACE_WALL') return;
+      if (!G.validWalls.some(w => w.type === type && w.wr === wr && w.wc === wc)) return;
+      if (type === 'h') G.hWalls[wr][wc] = true;
+      else G.vWalls[wr][wc] = true;
+      endTurn();
+    }
+
+    function undoToSelect() {
+      if (G.phase === 'MOVE_STEP1') {
+        G.selIdx = -1; G.step1Targets = [];
+        G.phase = 'SELECT_PIECE';
+        render();
+      }
+    }
+
+    function undoToStep1() {
+      if (G.phase === 'STEP1_WALL_OR_STEP2') {
+        G.pieces[G.selIdx].row = G.origR;
+        G.pieces[G.selIdx].col = G.origC;
+        G.step1Targets = getStep1Targets(G.selIdx);
+        G.step2Targets = [];
+        G.validWalls = [];
+        G.intR = G.intC = -1;
+        G.phase = 'MOVE_STEP1';
+        render();
+      }
+    }
+
+    function undoFromWall() {
+      if (G.phase === 'PLACE_WALL') {
+        // Go back to step1 position
+        G.pieces[G.selIdx].row = G.intR;
+        G.pieces[G.selIdx].col = G.intC;
+        G.step2Targets = getStep2Targets(G.intR, G.intC);
+        G.validWalls = getValidWalls(G.intR, G.intC);
+        G.step2R = G.step2C = -1;
+        G.phase = 'STEP1_WALL_OR_STEP2';
+        render();
+      }
+    }
+
+    function endTurn() {
+      G.selIdx = -1;
+      G.origR = G.origC = G.intR = G.intC = -1;
+      G.step2R = G.step2C = -1;
+      G.step1Targets = []; G.step2Targets = []; G.validWalls = [];
+      if (checkGameEnd()) { G.phase = 'GAME_OVER'; }
+      else {
+        G.gameTurn++;
+        G.phase = 'SELECT_PIECE';
+        const cp = currentPlayer();
+        if (!G.pieces.some((p, i) => p.player === cp && getStep1Targets(i).length > 0)) {
+          G.gameTurn++; // skip
+          const cp2 = currentPlayer();
+          if (!G.pieces.some((p, i) => p.player === cp2 && getStep1Targets(i).length > 0)) {
+            G.phase = 'GAME_OVER';
+          }
+        }
+      }
+      render();
+    }
+
+    // ===== CPU AI =====
+    function isCpuTurn() {
+      return cpuMode && currentPlayer() === CPU_PLAYER && G.phase !== 'GAME_OVER';
+    }
+
+    function scheduleCpuTurn() {
+      if (!isCpuTurn()) return;
+      if (cpuAnimating) return;
+      if (G.phase !== 'PLACEMENT' && G.phase !== 'SELECT_PIECE') return;
+      if (cpuTimerId) return;
+      cpuTimerId = setTimeout(() => { cpuTimerId = null; cpuTurn(); }, CPU_DELAY);
+    }
+
+    function cancelCpu() {
+      if (cpuTimerId) { clearTimeout(cpuTimerId); cpuTimerId = null; }
+      cpuAnimating = false;
+      cpuHighlight = null;
+    }
+
+    function setWall(w, val) {
+      if (w.type === 'h') G.hWalls[w.wr][w.wc] = val;
+      else G.vWalls[w.wr][w.wc] = val;
+    }
+
+    function evalBoard() {
+      // Voronoi BFS: each cell is assigned to the nearest player's piece (respecting walls)
+      const dist = make2D(BS, BS, -1);
+      const cellOwner = make2D(BS, BS, -1);
+      const q = [];
+      for (let i = 0; i < G.pieces.length; i++) {
+        const p = G.pieces[i];
+        if (dist[p.row][p.col] === -1) {
+          dist[p.row][p.col] = 0;
+          cellOwner[p.row][p.col] = p.player;
+          q.push([p.row, p.col]);
+        }
+      }
+      let qi = 0;
+      while (qi < q.length) {
+        const [cr, cc] = q[qi++];
+        const d = dist[cr][cc];
+        const pl = cellOwner[cr][cc];
+        if (pl === -1) continue;
+        for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+          const nr = cr + dr, nc = cc + dc;
+          if (nr < 0 || nr >= BS || nc < 0 || nc >= BS) continue;
+          if (hasWallBetween(cr, cc, nr, nc)) continue;
+          if (dist[nr][nc] === -1) {
+            dist[nr][nc] = d + 1;
+            cellOwner[nr][nc] = pl;
+            q.push([nr, nc]);
+          } else if (dist[nr][nc] === d + 1 && cellOwner[nr][nc] !== pl && cellOwner[nr][nc] !== -1) {
+            cellOwner[nr][nc] = -1; // equidistant = contested
+          }
+        }
+      }
+
+      // Voronoi territory
+      let territory = 0;
+      for (let r = 0; r < BS; r++) {
+        for (let c = 0; c < BS; c++) {
+          if (cellOwner[r][c] === CPU_PLAYER) territory++;
+          else if (cellOwner[r][c] === 1 - CPU_PLAYER) territory--;
+        }
+      }
+
+      // Bonus for fully secured regions (walled off with only one player)
+      let securedBonus = 0;
+      for (const comp of getComponents()) {
+        const ps = new Set();
+        for (const [r, c] of comp) {
+          const pi = pieceAt(r, c);
+          if (pi !== -1) ps.add(G.pieces[pi].player);
+        }
+        if (ps.size === 1) {
+          securedBonus += ([...ps][0] === CPU_PLAYER ? 1 : -1) * comp.length;
+        }
+      }
+
+      // Mobility (heavily weighted to avoid self-trapping)
+      let cpuMob = 0, humMob = 0;
+      for (let i = 0; i < G.pieces.length; i++) {
+        const mob = getStep1Targets(i).length;
+        if (G.pieces[i].player === CPU_PLAYER) cpuMob += mob; else humMob += mob;
+      }
+
+      return territory + securedBonus + 0.5 * (cpuMob - humMob);
+    }
+
+    // Enumerate all moves for a given player, returns [{idx, tr, tc, wall}]
+    function enumerateMoves(player) {
+      const moves = [];
+      for (let i = 0; i < G.pieces.length; i++) {
+        if (G.pieces[i].player !== player) continue;
+        const s1 = getStep1Targets(i);
+        if (s1.length === 0) continue;
+        const oR = G.pieces[i].row, oC = G.pieces[i].col;
+        for (const t1 of s1) {
+          G.pieces[i].row = t1.r; G.pieces[i].col = t1.c;
+          const w1 = getValidWalls(t1.r, t1.c);
+          if (w1.length === 0) moves.push({ idx: i, oR, oC, tr: t1.r, tc: t1.c, wall: null });
+          for (const w of w1) moves.push({ idx: i, oR, oC, tr: t1.r, tc: t1.c, wall: { ...w } });
+          for (const t2 of getStep2Targets(t1.r, t1.c)) {
+            G.pieces[i].row = t2.r; G.pieces[i].col = t2.c;
+            const w2 = getValidWalls(t2.r, t2.c);
+            if (w2.length === 0) moves.push({ idx: i, oR, oC, tr: t2.r, tc: t2.c, wall: null });
+            for (const w of w2) moves.push({ idx: i, oR, oC, tr: t2.r, tc: t2.c, wall: { ...w } });
+            G.pieces[i].row = t1.r; G.pieces[i].col = t1.c;
+          }
+          G.pieces[i].row = oR; G.pieces[i].col = oC;
+        }
+      }
+      return moves;
+    }
+
+    function applyMove(m) {
+      const oR = G.pieces[m.idx].row, oC = G.pieces[m.idx].col;
+      G.pieces[m.idx].row = m.tr; G.pieces[m.idx].col = m.tc;
+      if (m.wall) setWall(m.wall, true);
+      return { idx: m.idx, oR, oC, wall: m.wall };
+    }
+
+    function undoMove(snap) {
+      G.pieces[snap.idx].row = snap.oR; G.pieces[snap.idx].col = snap.oC;
+      if (snap.wall) setWall(snap.wall, false);
+    }
+
+    function pickBestMove() {
+      const moves = enumerateMoves(CPU_PLAYER);
+      if (moves.length === 0) return null;
+
+      if (cpuLevel === 1) {
+        // Beginner: pick random from top 60% of moves, heavy randomness
+        const scored = moves.map(m => {
+          const snap = applyMove(m);
+          const s = evalBoard() + Math.random() * 8;
+          undoMove(snap);
+          return { m, s };
+        });
+        scored.sort((a, b) => b.s - a.s);
+        const pick = Math.floor(Math.random() * Math.max(1, Math.ceil(scored.length * 0.6)));
+        return scored[pick].m;
+      }
+
+      if (cpuLevel === 2) {
+        // Intermediate: 1-ply greedy
+        let best = -Infinity, bestM = null;
+        for (const m of moves) {
+          const snap = applyMove(m);
+          const s = evalBoard() + Math.random() * 0.01;
+          undoMove(snap);
+          if (s > best) { best = s; bestM = m; }
+        }
+        return bestM;
+      }
+
+      // Advanced (level 3): 2-ply minimax
+      let best = -Infinity, bestM = null;
+      for (const m of moves) {
+        const snap = applyMove(m);
+        // Opponent's best response
+        const oppMoves = enumerateMoves(1 - CPU_PLAYER);
+        let worstForCpu = Infinity;
+        if (oppMoves.length === 0) {
+          worstForCpu = evalBoard();
+        } else {
+          for (const om of oppMoves) {
+            const oSnap = applyMove(om);
+            const s = evalBoard();
+            undoMove(oSnap);
+            if (s < worstForCpu) worstForCpu = s;
+          }
+        }
+        undoMove(snap);
+        const score = worstForCpu + Math.random() * 0.01;
+        if (score > best) { best = score; bestM = m; }
+      }
+      return bestM;
+    }
+
+    function cpuTurn() {
+      if (G.phase === 'PLACEMENT') cpuPlacement();
+      else if (G.phase === 'SELECT_PIECE') cpuMoveAndWall();
+    }
+
+    function cpuPlacement() {
+      let bestR = -1, bestC = -1;
+      if (cpuLevel === 1) {
+        // Random empty cell
+        const empty = [];
+        for (let r = 0; r < BS; r++) for (let c = 0; c < BS; c++) if (pieceAt(r, c) === -1) empty.push([r, c]);
+        if (empty.length > 0) { const p = empty[Math.floor(Math.random() * empty.length)]; bestR = p[0]; bestC = p[1]; }
+      } else {
+        let bestScore = -Infinity;
+        for (let r = 0; r < BS; r++) {
+          for (let c = 0; c < BS; c++) {
+            if (pieceAt(r, c) !== -1) continue;
+            G.pieces.push({ player: CPU_PLAYER, row: r, col: c });
+            const s = evalBoard() + Math.random() * 0.01;
+            G.pieces.pop();
+            if (s > bestScore) { bestScore = s; bestR = r; bestC = c; }
+          }
+        }
+      }
+      if (bestR >= 0) {
+        cpuHighlight = { fromR: -1, fromC: -1, toR: bestR, toC: bestC, wall: null };
+        doPlacement(bestR, bestC);
+        cpuTimerId = setTimeout(() => { cpuTimerId = null; cpuHighlight = null; render(); }, 800);
+      }
+    }
+
+    function cpuMoveAndWall() {
+      const bestMove = pickBestMove();
+      if (!bestMove) return;
+      // Animate step by step
+      cpuAnimating = true;
+      const m = bestMove;
+      // Step 1: highlight origin
+      cpuHighlight = { fromR: m.oR, fromC: m.oC, toR: -1, toC: -1, wall: null };
+      G.selIdx = m.idx;
+      render();
+      cpuTimerId = setTimeout(() => {
+        cpuTimerId = null;
+        // Step 2: move piece, highlight destination
+        G.pieces[m.idx].row = m.tr;
+        G.pieces[m.idx].col = m.tc;
+        cpuHighlight = { fromR: m.oR, fromC: m.oC, toR: m.tr, toC: m.tc, wall: null };
+        render();
+        cpuTimerId = setTimeout(() => {
+          cpuTimerId = null;
+          // Step 3: place wall
+          if (m.wall) {
+            setWall(m.wall, true);
+            cpuHighlight = { fromR: m.oR, fromC: m.oC, toR: m.tr, toC: m.tc, wall: m.wall };
+            render();
+          }
+          cpuTimerId = setTimeout(() => {
+            cpuTimerId = null;
+            cpuAnimating = false;
+            cpuHighlight = null;
+            G.selIdx = -1;
+            endTurn();
+          }, 500);
+        }, 500);
+      }, 500);
+    }
+
+    // ===== Render =====
+    function render() {
+      renderBoard(); renderStatus(); renderControls();
+      if (G.phase === 'GAME_OVER') renderScores();
+      else document.getElementById('score-panel').style.display = 'none';
+      scheduleCpuTurn();
+    }
+
+    function makePieceEl(player, extra) {
+      const pe = document.createElement('div');
+      pe.className = 'piece ' + (extra || '');
+      pe.style.width = PIECE_PX + 'px';
+      pe.style.height = PIECE_PX + 'px';
+      pe.style.background = COLORS[player];
+      return pe;
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      const colT = [], rowT = [];
+      for (let i = 0; i < BS; i++) { colT.push(CELL_PX + 'px'); if (i < BS - 1) colT.push(WALL_PX + 'px'); }
+      for (let i = 0; i < BS; i++) { rowT.push(CELL_PX + 'px'); if (i < BS - 1) rowT.push(WALL_PX + 'px'); }
+      board.style.gridTemplateColumns = colT.join(' ');
+      board.style.gridTemplateRows = rowT.join(' ');
+
+      const td = calcTerritory();
+      const cpuNow = isCpuTurn();
+
+      for (let r = 0; r < BS; r++) {
+        for (let c = 0; c < BS; c++) {
+          const dr = BS - 1 - r;
+          const el = document.createElement('div');
+          el.className = 'cell';
+          el.style.gridRow = (dr * 2 + 1).toString();
+          el.style.gridColumn = (c * 2 + 1).toString();
+
+          if (td) { const o = td.cellOwner[r][c]; if (o >= 0) el.classList.add('territory-' + o); }
+
+          // CPU move highlights
+          if (cpuHighlight) {
+            if (cpuHighlight.fromR === r && cpuHighlight.fromC === c) el.classList.add('cpu-from');
+            if (cpuHighlight.toR === r && cpuHighlight.toC === c) el.classList.add('cpu-to');
+          }
+
+          if (!cpuNow) {
+            if (G.phase === 'PLACEMENT' && pieceAt(r, c) === -1) {
+              el.classList.add('highlight');
+              el.addEventListener('click', ((a, b) => () => doPlacement(a, b))(r, c));
+            }
+            if (G.phase === 'MOVE_STEP1' && G.step1Targets.some(t => t.r === r && t.c === c)) {
+              el.classList.add('highlight');
+              el.addEventListener('click', ((a, b) => () => doStep1(a, b))(r, c));
+            }
+            if (G.phase === 'STEP1_WALL_OR_STEP2' && G.step2Targets.some(t => t.r === r && t.c === c)) {
+              el.classList.add('highlight');
+              el.addEventListener('click', ((a, b) => () => doStep2(a, b))(r, c));
+            }
+          }
+
+          // Ghost piece at original pos
+          if ((G.phase === 'STEP1_WALL_OR_STEP2' || G.phase === 'PLACE_WALL') &&
+            G.origR === r && G.origC === c && G.origR >= 0 && pieceAt(r, c) === -1) {
+            el.appendChild(makePieceEl(G.pieces[G.selIdx].player, 'ghost'));
+          }
+
+          // Real pieces
+          const pi = pieceAt(r, c);
+          if (pi !== -1) {
+            const pe = makePieceEl(G.pieces[pi].player, '');
+            if (!cpuNow && G.phase === 'SELECT_PIECE' && G.pieces[pi].player === currentPlayer() && getStep1Targets(pi).length > 0) {
+              pe.classList.add('selectable');
+              pe.addEventListener('click', ((ii) => (e) => { e.stopPropagation(); doSelectPiece(ii); })(pi));
+            }
+            if (G.selIdx === pi) pe.classList.add('selected');
+            el.appendChild(pe);
+          }
+          board.appendChild(el);
+        }
+      }
+
+      // H walls
+      for (let r = 0; r < BS - 1; r++) for (let c = 0; c < BS; c++) {
+        const dr = BS - 1 - r;
+        const el = document.createElement('div');
+        el.className = 'wall-h';
+        el.style.gridRow = (dr * 2).toString();
+        el.style.gridColumn = (c * 2 + 1).toString();
+        if (G.hWalls[r][c]) {
+          el.classList.add('placed');
+          if (cpuHighlight && cpuHighlight.wall && cpuHighlight.wall.type === 'h' && cpuHighlight.wall.wr === r && cpuHighlight.wall.wc === c) el.classList.add('cpu-wall');
+        }
+        else if ((G.phase === 'PLACE_WALL' || G.phase === 'STEP1_WALL_OR_STEP2') && G.validWalls.some(w => w.type === 'h' && w.wr === r && w.wc === c)) {
+          el.classList.add('available');
+          const handler = G.phase === 'STEP1_WALL_OR_STEP2'
+            ? ((a, b) => () => doPlaceWallFromStep1('h', a, b))(r, c)
+            : ((a, b) => () => doPlaceWall('h', a, b))(r, c);
+          el.addEventListener('click', handler);
+        }
+        board.appendChild(el);
+      }
+
+      // V walls
+      for (let r = 0; r < BS; r++) for (let c = 0; c < BS - 1; c++) {
+        const dr = BS - 1 - r;
+        const el = document.createElement('div');
+        el.className = 'wall-v';
+        el.style.gridRow = (dr * 2 + 1).toString();
+        el.style.gridColumn = (c * 2 + 2).toString();
+        if (G.vWalls[r][c]) {
+          el.classList.add('placed');
+          if (cpuHighlight && cpuHighlight.wall && cpuHighlight.wall.type === 'v' && cpuHighlight.wall.wr === r && cpuHighlight.wall.wc === c) el.classList.add('cpu-wall');
+        }
+        else if ((G.phase === 'PLACE_WALL' || G.phase === 'STEP1_WALL_OR_STEP2') && G.validWalls.some(w => w.type === 'v' && w.wr === r && w.wc === c)) {
+          el.classList.add('available');
+          const handler = G.phase === 'STEP1_WALL_OR_STEP2'
+            ? ((a, b) => () => doPlaceWallFromStep1('v', a, b))(r, c)
+            : ((a, b) => () => doPlaceWall('v', a, b))(r, c);
+          el.addEventListener('click', handler);
+        }
+        board.appendChild(el);
+      }
+
+      // Corners
+      for (let r = 0; r < BS - 1; r++) for (let c = 0; c < BS - 1; c++) {
+        const dr = BS - 1 - r;
+        const el = document.createElement('div');
+        el.className = 'corner';
+        el.style.gridRow = (dr * 2).toString();
+        el.style.gridColumn = (c * 2 + 2).toString();
+        board.appendChild(el);
+      }
+
+      // Labels
+      const rl = document.getElementById('row-labels');
+      rl.innerHTML = '';
+      for (let r = BS - 1; r >= 0; r--) {
+        const sp = document.createElement('span');
+        sp.textContent = (r + 1).toString();
+        sp.style.height = CELL_PX + 'px';
+        if (r > 0) sp.style.marginBottom = WALL_PX + 'px';
+        rl.appendChild(sp);
+      }
+      const cl = document.getElementById('col-labels');
+      cl.innerHTML = '';
+      for (let c = 0; c < BS; c++) {
+        const sp = document.createElement('span');
+        sp.textContent = COL_LABELS[c];
+        sp.style.width = CELL_PX + 'px';
+        if (c < BS - 1) sp.style.marginRight = WALL_PX + 'px';
+        cl.appendChild(sp);
+      }
+    }
+
+    function renderStatus() {
+      const bar = document.getElementById('status-bar');
+      const cp = currentPlayer();
+      const dot = `<span class="p-dot" style="background:${COLORS[cp]}"></span>`;
+      let msg = '';
+      const cpuLabel = cpuMode && cp === CPU_PLAYER ? ' (CPU)' : '';
+      switch (G.phase) {
+        case 'PLACEMENT': {
+          if (cpuMode && cp === CPU_PLAYER) {
+            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">思考中...</span>`;
+          } else {
+            const n = G.pieces.filter(p => p.player === cp).length - 2 + 1;
+            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">追加の駒を配置 (${n}/2)</span><br>空きマスをクリック`;
+          }
+          break;
+        }
+        case 'SELECT_PIECE': {
+          if (cpuMode && cp === CPU_PLAYER) {
+            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">思考中...</span>`;
+          } else {
+            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">駒を選択</span><br>移動する駒をクリック`;
+          }
+          break;
+        }
+        case 'MOVE_STEP1': msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">移動先を選択</span><br>黄色のマスをクリック`; break;
+        case 'STEP1_WALL_OR_STEP2': msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">壁を設置 or 2歩目を選択</span><br>黄色の辺 or 黄色マスをクリック`; break;
+        case 'PLACE_WALL': msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">壁を設置</span><br>黄色の辺をクリック`; break;
+        case 'GAME_OVER': msg = `<span class="phase">ゲーム終了！</span>`; break;
+      }
+      bar.innerHTML = msg;
+    }
+
+    function renderControls() {
+      const el = document.getElementById('controls');
+      el.innerHTML = '';
+      const addBtn = (text, cls, fn) => {
+        const b = document.createElement('button');
+        b.className = 'ctrl-btn ' + cls; b.textContent = text;
+        b.addEventListener('click', fn); el.appendChild(b);
+      };
+      if (G.phase === 'MOVE_STEP1') addBtn('選択解除', '', undoToSelect);
+      if (G.phase === 'STEP1_WALL_OR_STEP2') {
+        addBtn('戻る', '', undoToStep1);
+      }
+      if (G.phase === 'PLACE_WALL') {
+        addBtn('戻る', '', undoFromWall);
+      }
+      if (!['PLACEMENT', 'GAME_OVER'].includes(G.phase)) {
+        const sp = document.createElement('span');
+        sp.style.cssText = 'color:#666;font-size:0.8rem;padding:6px 8px';
+        const lvName = cpuMode ? ['初心者', '中級者', '上級者'][cpuLevel - 1] : '';
+        sp.textContent = `ターン ${Math.floor(G.gameTurn / 2) + 1}${cpuMode ? ' | CPU: ' + lvName : ''}`;
+        el.appendChild(sp);
+      }
+      addBtn('リセット', 'primary', () => {
+        cancelCpu();
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('setup').style.display = 'block';
+        document.getElementById('score-panel').style.display = 'none';
+      });
+    }
+
+    function renderScores() {
+      const panel = document.getElementById('score-panel');
+      panel.style.display = 'block';
+      const { territory } = calcTerritory();
+      const mx = Math.max(...territory);
+      const draw = territory[0] === territory[1];
+      let html = '<h3>結果</h3>';
+      for (let i = 0; i < 2; i++) {
+        const w = !draw && territory[i] === mx;
+        html += `<div class="score-row ${w ? 'winner' : ''}">
+            <span class="score-dot" style="background:${COLORS[i]}"></span>
+            ${NAMES[i]}: <strong>${territory[i]}マス</strong>${w ? ' 👑' : draw ? ' 🤝' : ''}
+        </div>`;
+      }
+      const tot = territory[0] + territory[1];
+      if (tot < BS * BS) html += `<div class="score-row" style="color:#555">未所有: ${BS * BS - tot}マス</div>`;
+      if (draw) html += `<div style="margin-top:8px;color:#f0c040">引き分け！</div>`;
+      panel.innerHTML = html;
+      const b = document.createElement('button');
+      b.className = 'ctrl-btn primary'; b.textContent = 'もう一度遊ぶ';
+      b.style.marginTop = '12px';
+      b.addEventListener('click', () => startGame(cpuMode, cpuLevel));
+      panel.appendChild(b);
+    }
+
+    function startGame(cpu, level) {
+      cancelCpu();
+      cpuMode = !!cpu;
+      cpuLevel = level || 2;
+      G = newGame();
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      document.getElementById('score-panel').style.display = 'none';
+      render();
+    }
+
+    function toggleRules() {
+      const el = document.getElementById('rules');
+      el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+  </script>
+</body>
+
+</html>
