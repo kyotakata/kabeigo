@@ -27,10 +27,12 @@
       color: #e0e0e0;
       font-family: 'Segoe UI', 'Meiryo', 'Yu Gothic', sans-serif;
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       user-select: none;
+      overflow-x: hidden;
     }
 
     h1 {
@@ -50,7 +52,7 @@
     #app {
       width: 100%;
       max-width: 720px;
-      padding: 0 12px 24px;
+      padding: 0 8px 24px;
     }
 
     /* Setup */
@@ -452,7 +454,16 @@
   <script>
     // ===== Constants =====
     const BS = 7;
-    const CELL_PX = 56, WALL_PX = 8, PIECE_PX = 38;
+    let CELL_PX = 56, WALL_PX = 8, PIECE_PX = 38;
+
+    function computeSizes() {
+      const available = Math.min(window.innerWidth, 720) - 48; // padding + row labels
+      const maxCell = Math.floor((available - (BS - 1) * 8 - 8) / BS);
+      CELL_PX = Math.max(36, Math.min(56, maxCell));
+      WALL_PX = CELL_PX <= 42 ? 6 : 8;
+      PIECE_PX = Math.round(CELL_PX * 0.68);
+    }
+    computeSizes();
     const COLORS = ['#e74c3c', '#3498db'];
     const NAMES = ['先手（赤）', '後手（青）'];
     const COL_LABELS = 'ABCDEFG';
@@ -598,6 +609,20 @@
       return true;
     }
 
+    function isInSecuredTerritory(idx) {
+      const p = G.pieces[idx];
+      for (const comp of getComponents()) {
+        if (!comp.some(([r, c]) => r === p.row && c === p.col)) continue;
+        const players = new Set();
+        for (const [r, c] of comp) {
+          const pi = pieceAt(r, c);
+          if (pi !== -1) players.add(G.pieces[pi].player);
+        }
+        return players.size === 1;
+      }
+      return false;
+    }
+
     function calcTerritory() {
       const territory = [0, 0];
       const cellOwner = make2D(BS, BS, -1);
@@ -625,6 +650,7 @@
 
     function doSelectPiece(idx) {
       if (G.phase !== 'SELECT_PIECE' || G.pieces[idx].player !== currentPlayer()) return;
+      if (isInSecuredTerritory(idx)) return;
       const t = getStep1Targets(idx);
       if (t.length === 0) return;
       G.selIdx = idx;
@@ -726,10 +752,10 @@
         G.gameTurn++;
         G.phase = 'SELECT_PIECE';
         const cp = currentPlayer();
-        if (!G.pieces.some((p, i) => p.player === cp && getStep1Targets(i).length > 0)) {
+        if (!G.pieces.some((p, i) => p.player === cp && !isInSecuredTerritory(i) && getStep1Targets(i).length > 0)) {
           G.gameTurn++; // skip
           const cp2 = currentPlayer();
-          if (!G.pieces.some((p, i) => p.player === cp2 && getStep1Targets(i).length > 0)) {
+          if (!G.pieces.some((p, i) => p.player === cp2 && !isInSecuredTerritory(i) && getStep1Targets(i).length > 0)) {
             G.phase = 'GAME_OVER';
           }
         }
@@ -831,6 +857,7 @@
       const moves = [];
       for (let i = 0; i < G.pieces.length; i++) {
         if (G.pieces[i].player !== player) continue;
+        if (isInSecuredTerritory(i)) continue;
         const s1 = getStep1Targets(i);
         if (s1.length === 0) continue;
         const oR = G.pieces[i].row, oC = G.pieces[i].col;
@@ -1054,7 +1081,7 @@
           const pi = pieceAt(r, c);
           if (pi !== -1) {
             const pe = makePieceEl(G.pieces[pi].player, '');
-            if (!cpuNow && G.phase === 'SELECT_PIECE' && G.pieces[pi].player === currentPlayer() && getStep1Targets(pi).length > 0) {
+            if (!cpuNow && G.phase === 'SELECT_PIECE' && G.pieces[pi].player === currentPlayer() && !isInSecuredTerritory(pi) && getStep1Targets(pi).length > 0) {
               pe.classList.add('selectable');
               pe.addEventListener('click', ((ii) => (e) => { e.stopPropagation(); doSelectPiece(ii); })(pi));
             }
@@ -1229,6 +1256,7 @@
       cancelCpu();
       cpuMode = !!cpu;
       cpuLevel = level || 2;
+      computeSizes();
       G = newGame();
       document.getElementById('setup').style.display = 'none';
       document.getElementById('game').style.display = 'block';
@@ -1240,6 +1268,12 @@
       const el = document.getElementById('rules');
       el.style.display = el.style.display === 'block' ? 'none' : 'block';
     }
+
+    window.addEventListener('resize', () => {
+      if (!G) return;
+      computeSizes();
+      render();
+    });
   </script>
 </body>
 
