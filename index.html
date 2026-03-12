@@ -195,6 +195,10 @@
       background: rgba(52, 152, 219, 0.3);
     }
 
+    .cell.territory-2 {
+      background: rgba(46, 204, 113, 0.3);
+    }
+
     .piece {
       position: absolute;
       top: 50%;
@@ -331,6 +335,27 @@
       color: #fff;
     }
 
+    .ctrl-btn.danger {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
+    .ctrl-btn.danger:hover {
+      background: #e74c3c;
+      color: #fff;
+    }
+
+    .wall-h.breakable,
+    .wall-v.breakable {
+      background: rgba(231, 76, 60, 0.5);
+      cursor: pointer;
+    }
+
+    .wall-h.breakable:hover,
+    .wall-v.breakable:hover {
+      background: rgba(231, 76, 60, 0.8);
+    }
+
     /* Score */
     #score-panel {
       display: none;
@@ -398,27 +423,36 @@
 
     <div id="setup">
       <h2>Devil's Plan シーズン2 より</h2>
-      <button class="mode-btn" onclick="startGame(false)">2人対戦</button>
-      <div style="margin-top:12px">
-        <span style="color:#aaa;font-size:0.9rem">▼ CPU対戦</span>
+      <div style="margin-bottom:8px">
+        <span style="color:#aaa;font-size:0.9rem">▼ 対戦モード</span>
       </div>
-      <button class="mode-btn" onclick="startGame(true,1)">初心者</button>
-      <button class="mode-btn" onclick="startGame(true,2)">中級者</button>
-      <button class="mode-btn" onclick="startGame(true,3)">上級者</button>
+      <button class="mode-btn" onclick="startGame({players:2})">2人対戦</button>
+      <button class="mode-btn" onclick="startGame({players:3})">3人対戦</button>
+      <div style="margin-top:12px">
+        <span style="color:#aaa;font-size:0.9rem">▼ CPU対戦（2人）</span>
+      </div>
+      <button class="mode-btn" onclick="startGame({players:2,cpu:true,cpuLevel:1})">初心者</button>
+      <button class="mode-btn" onclick="startGame({players:2,cpu:true,cpuLevel:2})">中級者</button>
+      <button class="mode-btn" onclick="startGame({players:2,cpu:true,cpuLevel:3})">上級者</button>
       <div style="text-align:center;margin-top:16px">
         <button class="ctrl-btn" onclick="toggleRules()">ルール説明</button>
       </div>
       <div id="rules">
         <h4>概要</h4>
         <p>壁囲碁は駒を移動し壁を設置して、より多くの領域を確保したプレイヤーが勝利する抽象戦略ゲームです。</p>
-        <h4>初期配置</h4>
+        <h4>初期配置（2人戦）</h4>
         <ul>
           <li>7×7のボードに赤・青それぞれ2個の駒が事前配置されます</li>
           <li>先手→後手→後手→先手の順に追加の駒を1個ずつ配置します</li>
         </ul>
+        <h4>初期配置（3人戦）</h4>
+        <ul>
+          <li>事前配置の駒はありません</li>
+          <li>1番→2番→3番→3番→2番→1番の順に駒を配置（各2個）</li>
+        </ul>
         <h4>ゲーム進行</h4>
         <ul>
-          <li>先手と後手が交互にターンを行います</li>
+          <li>プレイヤーが順番にターンを行います</li>
           <li>各ターンで：
             <ol style="padding-left:18px">
               <li>自分の駒1つを1〜2マス移動（上下左右）</li>
@@ -428,6 +462,13 @@
           <li>他の駒を通り抜けたり重なることは不可</li>
           <li>壁を通り抜ける移動も不可</li>
           <li>2マス移動で1マス進んで元に戻ることも可</li>
+        </ul>
+        <h4>壁破壊（3人戦のみ）</h4>
+        <ul>
+          <li>各プレイヤーはゲーム中1回だけ「壁破壊」を宣言できます</li>
+          <li>宣言後、移動ルート上の壁を1枚壊しながら移動できます</li>
+          <li>確定した領地の壁を壊して相手の領地を狭めることも可能</li>
+          <li>未使用のまま終了しても、そのままゲーム終了となります</li>
         </ul>
         <h4>終了条件</h4>
         <ul>
@@ -457,30 +498,32 @@
     let CELL_PX = 56, WALL_PX = 8, PIECE_PX = 38;
 
     function computeSizes() {
-      const available = Math.min(window.innerWidth, 720) - 48; // padding + row labels
+      const available = Math.min(window.innerWidth, 720) - 48;
       const maxCell = Math.floor((available - (BS - 1) * 8 - 8) / BS);
       CELL_PX = Math.max(36, Math.min(56, maxCell));
       WALL_PX = CELL_PX <= 42 ? 6 : 8;
       PIECE_PX = Math.round(CELL_PX * 0.68);
     }
     computeSizes();
-    const COLORS = ['#e74c3c', '#3498db'];
-    const NAMES = ['先手（赤）', '後手（青）'];
+
+    const COLORS = ['#e74c3c', '#3498db', '#2ecc71'];
+    const NAMES_2 = ['先手（赤）', '後手（青）'];
+    const NAMES_3 = ['1番（赤）', '2番（青）', '3番（緑）'];
     const COL_LABELS = 'ABCDEFG';
     const CPU_PLAYER = 1;
     const CPU_DELAY = 500;
+
+    let numPlayers = 2;
     let cpuMode = false;
-    let cpuLevel = 2; // 1=beginner, 2=intermediate, 3=advanced
+    let cpuLevel = 2;
     let cpuTimerId = null;
     let cpuAnimating = false;
     let cpuHighlight = null;
 
-    // Initial pre-placed pieces
-    // (x,y) with (1,1)=bottom-left: x goes right, y goes up
-    // Mapping: row=7-y, col=x-1
-    // Red(0): (2,2)→(r5,c1)=B2  (6,6)→(r1,c5)=F6
-    // Blue(1): (2,6)→(r1,c1)=B6  (6,2)→(r5,c5)=F2
-    const INIT_PIECES = [
+    function NAMES(i) { return numPlayers === 3 ? NAMES_3[i] : NAMES_2[i]; }
+
+    // Initial pre-placed pieces (2-player only)
+    const INIT_PIECES_2 = [
       { player: 0, row: 5, col: 1 },
       { player: 0, row: 1, col: 5 },
       { player: 1, row: 1, col: 1 },
@@ -491,12 +534,14 @@
     let G = null;
 
     function newGame() {
+      const is3 = numPlayers === 3;
       return {
-        pieces: INIT_PIECES.map(p => ({ ...p })),
-        hWalls: make2D(BS - 1, BS, false),  // hWalls[r][c]: between row r and r+1 at col c
-        vWalls: make2D(BS, BS - 1, false),  // vWalls[r][c]: between col c and c+1 at row r
+        pieces: is3 ? [] : INIT_PIECES_2.map(p => ({ ...p })),
+        hWalls: make2D(BS - 1, BS, false),
+        vWalls: make2D(BS, BS - 1, false),
         phase: 'PLACEMENT',
-        placementTurn: 0,   // 0..3
+        placementTurn: 0,
+        placementTotal: is3 ? 6 : 4,
         gameTurn: 0,
         selIdx: -1,
         origR: -1, origC: -1,
@@ -505,6 +550,11 @@
         step1Targets: [],
         step2Targets: [],
         validWalls: [],
+        // Wall break (3-player only)
+        wallBreakUsed: [false, false, false],
+        wallBreaking: false,      // currently in wall-break mode this turn
+        breakTargetWalls: [],     // walls available to break
+        brokenWall: null,         // wall broken this turn {type, wr, wc}
       };
     }
 
@@ -513,8 +563,13 @@
     }
 
     // ===== Turn Order =====
-    function placementPlayer(turn) { return [0, 1, 1, 0][turn]; }
-    function gamePlayer(turn) { return turn % 2; }
+    // 2-player placement: 0,1,1,0
+    // 3-player placement: 0,1,2,2,1,0
+    function placementPlayer(turn) {
+      if (numPlayers === 3) return [0, 1, 2, 2, 1, 0][turn];
+      return [0, 1, 1, 0][turn];
+    }
+    function gamePlayer(turn) { return turn % numPlayers; }
     function currentPlayer() {
       return G.phase === 'PLACEMENT' ? placementPlayer(G.placementTurn) : gamePlayer(G.gameTurn);
     }
@@ -533,6 +588,15 @@
       return true;
     }
 
+    function wallBetween(r1, c1, r2, c2) {
+      const dr = r2 - r1, dc = c2 - c1;
+      if (dr === 1 && dc === 0 && G.hWalls[r1][c1]) return { type: 'h', wr: r1, wc: c1 };
+      if (dr === -1 && dc === 0 && G.hWalls[r2][c1]) return { type: 'h', wr: r2, wc: c1 };
+      if (dc === 1 && dr === 0 && G.vWalls[r1][c1]) return { type: 'v', wr: r1, wc: c1 };
+      if (dc === -1 && dr === 0 && G.vWalls[r1][c2]) return { type: 'v', wr: r1, wc: c2 };
+      return null;
+    }
+
     function adjacentEmpty(r, c) {
       const res = [];
       for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
@@ -545,11 +609,31 @@
       return res;
     }
 
+    // Adjacent cells reachable by breaking exactly one wall (for wall-break move)
+    function adjacentEmptyBreakingWall(r, c) {
+      const res = [];
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nr >= BS || nc < 0 || nc >= BS) continue;
+        if (pieceAt(nr, nc) !== -1) continue;
+        const w = wallBetween(r, c, nr, nc);
+        if (w) {
+          res.push({ r: nr, c: nc, wall: w });
+        } else {
+          res.push({ r: nr, c: nc, wall: null });
+        }
+      }
+      return res;
+    }
+
     function getStep1Targets(idx) {
       return adjacentEmpty(G.pieces[idx].row, G.pieces[idx].col);
     }
 
-    // Step 2: piece is at (intR,intC), original pos is vacant
+    function getStep1TargetsBreaking(idx) {
+      return adjacentEmptyBreakingWall(G.pieces[idx].row, G.pieces[idx].col);
+    }
+
     function getStep2Targets(intR, intC) {
       const res = [];
       for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
@@ -558,6 +642,25 @@
         if (hasWallBetween(intR, intC, nr, nc)) continue;
         if (pieceAt(nr, nc) !== -1) continue;
         res.push({ r: nr, c: nc });
+      }
+      return res;
+    }
+
+    function getStep2TargetsBreaking(intR, intC, alreadyBrokenWall) {
+      const res = [];
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = intR + dr, nc = intC + dc;
+        if (nr < 0 || nr >= BS || nc < 0 || nc >= BS) continue;
+        if (pieceAt(nr, nc) !== -1) continue;
+        const w = wallBetween(intR, intC, nr, nc);
+        if (w) {
+          if (!alreadyBrokenWall) {
+            res.push({ r: nr, c: nc, wall: w });
+          }
+          // if already broke a wall, can't break another
+        } else {
+          res.push({ r: nr, c: nc, wall: null });
+        }
       }
       return res;
     }
@@ -624,7 +727,7 @@
     }
 
     function calcTerritory() {
-      const territory = [0, 0];
+      const territory = Array(numPlayers).fill(0);
       const cellOwner = make2D(BS, BS, -1);
       for (const comp of getComponents()) {
         const ps = new Set();
@@ -644,29 +747,78 @@
       if (G.phase !== 'PLACEMENT' || pieceAt(r, c) !== -1) return;
       G.pieces.push({ player: currentPlayer(), row: r, col: c });
       G.placementTurn++;
-      if (G.placementTurn >= 4) { G.phase = 'SELECT_PIECE'; G.gameTurn = 0; }
+      if (G.placementTurn >= G.placementTotal) { G.phase = 'SELECT_PIECE'; G.gameTurn = 0; }
       render();
     }
 
+    function canSelectPiece(idx) {
+      if (G.pieces[idx].player !== currentPlayer()) return false;
+      if (isInSecuredTerritory(idx)) return false;
+      if (G.wallBreaking) {
+        // In wall-break mode, check if piece has any target at all (including breaking walls)
+        const targets = getStep1TargetsBreaking(idx);
+        return targets.length > 0;
+      }
+      return getStep1Targets(idx).length > 0;
+    }
+
     function doSelectPiece(idx) {
-      if (G.phase !== 'SELECT_PIECE' || G.pieces[idx].player !== currentPlayer()) return;
-      if (isInSecuredTerritory(idx)) return;
-      const t = getStep1Targets(idx);
-      if (t.length === 0) return;
+      if (G.phase !== 'SELECT_PIECE' || !canSelectPiece(idx)) return;
       G.selIdx = idx;
-      G.step1Targets = t;
+      if (G.wallBreaking) {
+        const allTargets = getStep1TargetsBreaking(idx);
+        // Filter to only reachable (with or without breaking)
+        G.step1Targets = allTargets.filter(t => !t.wall).map(t => ({ r: t.r, c: t.c }));
+        G.breakTargetWalls = allTargets.filter(t => t.wall);
+      } else {
+        G.step1Targets = getStep1Targets(idx);
+        G.breakTargetWalls = [];
+      }
       G.phase = 'MOVE_STEP1';
       render();
     }
 
     function doStep1(r, c) {
       if (G.phase !== 'MOVE_STEP1') return;
-      if (!G.step1Targets.some(t => t.r === r && t.c === c)) return;
+      // Check if this is a wall-break target
+      let brokenWall = null;
+      if (G.wallBreaking) {
+        const bt = G.breakTargetWalls.find(t => t.r === r && t.c === c);
+        if (bt) {
+          brokenWall = bt.wall;
+        } else if (!G.step1Targets.some(t => t.r === r && t.c === c)) {
+          return;
+        }
+      } else {
+        if (!G.step1Targets.some(t => t.r === r && t.c === c)) return;
+      }
+
       const p = G.pieces[G.selIdx];
       G.origR = p.row; G.origC = p.col;
+
+      // Break the wall if needed
+      if (brokenWall) {
+        if (brokenWall.type === 'h') G.hWalls[brokenWall.wr][brokenWall.wc] = false;
+        else G.vWalls[brokenWall.wr][brokenWall.wc] = false;
+        G.brokenWall = brokenWall;
+      }
+
       p.row = r; p.col = c;
       G.intR = r; G.intC = c;
-      G.step2Targets = getStep2Targets(r, c);
+
+      if (G.wallBreaking && !G.brokenWall) {
+        // Still in wall-break mode for step 2
+        const allTargets = getStep2TargetsBreaking(r, c, false);
+        G.step2Targets = allTargets.filter(t => !t.wall).map(t => ({ r: t.r, c: t.c }));
+        G.breakTargetWalls = allTargets.filter(t => t.wall);
+      } else if (G.wallBreaking && G.brokenWall) {
+        // Already broke a wall, step 2 is normal
+        G.step2Targets = getStep2Targets(r, c);
+        G.breakTargetWalls = [];
+      } else {
+        G.step2Targets = getStep2Targets(r, c);
+        G.breakTargetWalls = [];
+      }
       G.validWalls = getValidWalls(r, c);
       G.phase = 'STEP1_WALL_OR_STEP2';
       render();
@@ -679,7 +831,26 @@
 
     function doStep2(r, c) {
       if (G.phase !== 'STEP1_WALL_OR_STEP2') return;
-      if (!G.step2Targets.some(t => t.r === r && t.c === c)) return;
+
+      // Check wall-break targets for step 2
+      let brokenWall = null;
+      if (G.wallBreaking && !G.brokenWall) {
+        const bt = G.breakTargetWalls.find(t => t.r === r && t.c === c);
+        if (bt) {
+          brokenWall = bt.wall;
+        } else if (!G.step2Targets.some(t => t.r === r && t.c === c)) {
+          return;
+        }
+      } else {
+        if (!G.step2Targets.some(t => t.r === r && t.c === c)) return;
+      }
+
+      if (brokenWall) {
+        if (brokenWall.type === 'h') G.hWalls[brokenWall.wr][brokenWall.wc] = false;
+        else G.vWalls[brokenWall.wr][brokenWall.wc] = false;
+        G.brokenWall = brokenWall;
+      }
+
       G.step2R = r; G.step2C = c;
       G.pieces[G.selIdx].row = r;
       G.pieces[G.selIdx].col = c;
@@ -696,7 +867,7 @@
 
     function goToWall(r, c) {
       G.validWalls = getValidWalls(r, c);
-      if (G.validWalls.length === 0) { endTurn(); } // extremely rare
+      if (G.validWalls.length === 0) { endTurn(); }
       else { G.phase = 'PLACE_WALL'; render(); }
     }
 
@@ -710,7 +881,7 @@
 
     function undoToSelect() {
       if (G.phase === 'MOVE_STEP1') {
-        G.selIdx = -1; G.step1Targets = [];
+        G.selIdx = -1; G.step1Targets = []; G.breakTargetWalls = [];
         G.phase = 'SELECT_PIECE';
         render();
       }
@@ -718,9 +889,22 @@
 
     function undoToStep1() {
       if (G.phase === 'STEP1_WALL_OR_STEP2') {
+        // Restore broken wall if any
+        if (G.brokenWall) {
+          if (G.brokenWall.type === 'h') G.hWalls[G.brokenWall.wr][G.brokenWall.wc] = true;
+          else G.vWalls[G.brokenWall.wr][G.brokenWall.wc] = true;
+          G.brokenWall = null;
+        }
         G.pieces[G.selIdx].row = G.origR;
         G.pieces[G.selIdx].col = G.origC;
-        G.step1Targets = getStep1Targets(G.selIdx);
+        if (G.wallBreaking) {
+          const allTargets = getStep1TargetsBreaking(G.selIdx);
+          G.step1Targets = allTargets.filter(t => !t.wall).map(t => ({ r: t.r, c: t.c }));
+          G.breakTargetWalls = allTargets.filter(t => t.wall);
+        } else {
+          G.step1Targets = getStep1Targets(G.selIdx);
+          G.breakTargetWalls = [];
+        }
         G.step2Targets = [];
         G.validWalls = [];
         G.intR = G.intC = -1;
@@ -731,10 +915,16 @@
 
     function undoFromWall() {
       if (G.phase === 'PLACE_WALL') {
-        // Go back to step1 position
         G.pieces[G.selIdx].row = G.intR;
         G.pieces[G.selIdx].col = G.intC;
-        G.step2Targets = getStep2Targets(G.intR, G.intC);
+        if (G.wallBreaking && !G.brokenWall) {
+          const allTargets = getStep2TargetsBreaking(G.intR, G.intC, false);
+          G.step2Targets = allTargets.filter(t => !t.wall).map(t => ({ r: t.r, c: t.c }));
+          G.breakTargetWalls = allTargets.filter(t => t.wall);
+        } else {
+          G.step2Targets = getStep2Targets(G.intR, G.intC);
+          G.breakTargetWalls = [];
+        }
         G.validWalls = getValidWalls(G.intR, G.intC);
         G.step2R = G.step2C = -1;
         G.phase = 'STEP1_WALL_OR_STEP2';
@@ -742,30 +932,43 @@
       }
     }
 
+    // Activate wall-break for current player
+    function activateWallBreak() {
+      const cp = currentPlayer();
+      if (numPlayers !== 3 || G.wallBreakUsed[cp] || G.phase !== 'SELECT_PIECE') return;
+      G.wallBreakUsed[cp] = true;
+      G.wallBreaking = true;
+      render();
+    }
+
     function endTurn() {
       G.selIdx = -1;
       G.origR = G.origC = G.intR = G.intC = -1;
       G.step2R = G.step2C = -1;
       G.step1Targets = []; G.step2Targets = []; G.validWalls = [];
+      G.wallBreaking = false;
+      G.brokenWall = null;
+      G.breakTargetWalls = [];
       if (checkGameEnd()) { G.phase = 'GAME_OVER'; }
       else {
         G.gameTurn++;
         G.phase = 'SELECT_PIECE';
-        const cp = currentPlayer();
-        if (!G.pieces.some((p, i) => p.player === cp && !isInSecuredTerritory(i) && getStep1Targets(i).length > 0)) {
-          G.gameTurn++; // skip
-          const cp2 = currentPlayer();
-          if (!G.pieces.some((p, i) => p.player === cp2 && !isInSecuredTerritory(i) && getStep1Targets(i).length > 0)) {
-            G.phase = 'GAME_OVER';
-          }
+        // Skip players with no moves
+        let skipped = 0;
+        while (skipped < numPlayers) {
+          const cp = currentPlayer();
+          if (G.pieces.some((p, i) => p.player === cp && !isInSecuredTerritory(i) && getStep1Targets(i).length > 0)) break;
+          G.gameTurn++;
+          skipped++;
         }
+        if (skipped >= numPlayers) G.phase = 'GAME_OVER';
       }
       render();
     }
 
-    // ===== CPU AI =====
+    // ===== CPU AI (2-player only) =====
     function isCpuTurn() {
-      return cpuMode && currentPlayer() === CPU_PLAYER && G.phase !== 'GAME_OVER';
+      return cpuMode && numPlayers === 2 && currentPlayer() === CPU_PLAYER && G.phase !== 'GAME_OVER';
     }
 
     function scheduleCpuTurn() {
@@ -788,7 +991,6 @@
     }
 
     function evalBoard() {
-      // Voronoi BFS: each cell is assigned to the nearest player's piece (respecting walls)
       const dist = make2D(BS, BS, -1);
       const cellOwner = make2D(BS, BS, -1);
       const q = [];
@@ -815,12 +1017,11 @@
             cellOwner[nr][nc] = pl;
             q.push([nr, nc]);
           } else if (dist[nr][nc] === d + 1 && cellOwner[nr][nc] !== pl && cellOwner[nr][nc] !== -1) {
-            cellOwner[nr][nc] = -1; // equidistant = contested
+            cellOwner[nr][nc] = -1;
           }
         }
       }
 
-      // Voronoi territory
       let territory = 0;
       for (let r = 0; r < BS; r++) {
         for (let c = 0; c < BS; c++) {
@@ -829,7 +1030,6 @@
         }
       }
 
-      // Bonus for fully secured regions (walled off with only one player)
       let securedBonus = 0;
       for (const comp of getComponents()) {
         const ps = new Set();
@@ -842,7 +1042,6 @@
         }
       }
 
-      // Mobility (heavily weighted to avoid self-trapping)
       let cpuMob = 0, humMob = 0;
       for (let i = 0; i < G.pieces.length; i++) {
         const mob = getStep1Targets(i).length;
@@ -852,7 +1051,6 @@
       return territory + securedBonus + 0.5 * (cpuMob - humMob);
     }
 
-    // Enumerate all moves for a given player, returns [{idx, tr, tc, wall}]
     function enumerateMoves(player) {
       const moves = [];
       for (let i = 0; i < G.pieces.length; i++) {
@@ -896,7 +1094,6 @@
       if (moves.length === 0) return null;
 
       if (cpuLevel === 1) {
-        // Beginner: pick random from top 60% of moves, heavy randomness
         const scored = moves.map(m => {
           const snap = applyMove(m);
           const s = evalBoard() + Math.random() * 8;
@@ -909,7 +1106,6 @@
       }
 
       if (cpuLevel === 2) {
-        // Intermediate: 1-ply greedy
         let best = -Infinity, bestM = null;
         for (const m of moves) {
           const snap = applyMove(m);
@@ -920,11 +1116,9 @@
         return bestM;
       }
 
-      // Advanced (level 3): 2-ply minimax
       let best = -Infinity, bestM = null;
       for (const m of moves) {
         const snap = applyMove(m);
-        // Opponent's best response
         const oppMoves = enumerateMoves(1 - CPU_PLAYER);
         let worstForCpu = Infinity;
         if (oppMoves.length === 0) {
@@ -952,7 +1146,6 @@
     function cpuPlacement() {
       let bestR = -1, bestC = -1;
       if (cpuLevel === 1) {
-        // Random empty cell
         const empty = [];
         for (let r = 0; r < BS; r++) for (let c = 0; c < BS; c++) if (pieceAt(r, c) === -1) empty.push([r, c]);
         if (empty.length > 0) { const p = empty[Math.floor(Math.random() * empty.length)]; bestR = p[0]; bestC = p[1]; }
@@ -978,23 +1171,19 @@
     function cpuMoveAndWall() {
       const bestMove = pickBestMove();
       if (!bestMove) return;
-      // Animate step by step
       cpuAnimating = true;
       const m = bestMove;
-      // Step 1: highlight origin
       cpuHighlight = { fromR: m.oR, fromC: m.oC, toR: -1, toC: -1, wall: null };
       G.selIdx = m.idx;
       render();
       cpuTimerId = setTimeout(() => {
         cpuTimerId = null;
-        // Step 2: move piece, highlight destination
         G.pieces[m.idx].row = m.tr;
         G.pieces[m.idx].col = m.tc;
         cpuHighlight = { fromR: m.oR, fromC: m.oC, toR: m.tr, toC: m.tc, wall: null };
         render();
         cpuTimerId = setTimeout(() => {
           cpuTimerId = null;
-          // Step 3: place wall
           if (m.wall) {
             setWall(m.wall, true);
             cpuHighlight = { fromR: m.oR, fromC: m.oC, toR: m.tr, toC: m.tc, wall: m.wall };
@@ -1040,6 +1229,12 @@
       const td = calcTerritory();
       const cpuNow = isCpuTurn();
 
+      // Collect all break-target cells for highlighting
+      const breakCells = new Set();
+      if (G.wallBreaking && G.breakTargetWalls) {
+        for (const t of G.breakTargetWalls) breakCells.add(t.r + ',' + t.c);
+      }
+
       for (let r = 0; r < BS; r++) {
         for (let c = 0; c < BS; c++) {
           const dr = BS - 1 - r;
@@ -1050,7 +1245,6 @@
 
           if (td) { const o = td.cellOwner[r][c]; if (o >= 0) el.classList.add('territory-' + o); }
 
-          // CPU move highlights
           if (cpuHighlight) {
             if (cpuHighlight.fromR === r && cpuHighlight.fromC === c) el.classList.add('cpu-from');
             if (cpuHighlight.toR === r && cpuHighlight.toC === c) el.classList.add('cpu-to');
@@ -1061,13 +1255,23 @@
               el.classList.add('highlight');
               el.addEventListener('click', ((a, b) => () => doPlacement(a, b))(r, c));
             }
-            if (G.phase === 'MOVE_STEP1' && G.step1Targets.some(t => t.r === r && t.c === c)) {
-              el.classList.add('highlight');
-              el.addEventListener('click', ((a, b) => () => doStep1(a, b))(r, c));
+            if (G.phase === 'MOVE_STEP1') {
+              if (G.step1Targets.some(t => t.r === r && t.c === c) || breakCells.has(r + ',' + c)) {
+                el.classList.add('highlight');
+                if (breakCells.has(r + ',' + c) && !G.step1Targets.some(t => t.r === r && t.c === c)) {
+                  el.style.background = 'rgba(231, 76, 60, 0.4)';
+                }
+                el.addEventListener('click', ((a, b) => () => doStep1(a, b))(r, c));
+              }
             }
-            if (G.phase === 'STEP1_WALL_OR_STEP2' && G.step2Targets.some(t => t.r === r && t.c === c)) {
-              el.classList.add('highlight');
-              el.addEventListener('click', ((a, b) => () => doStep2(a, b))(r, c));
+            if (G.phase === 'STEP1_WALL_OR_STEP2') {
+              if (G.step2Targets.some(t => t.r === r && t.c === c) || breakCells.has(r + ',' + c)) {
+                el.classList.add('highlight');
+                if (breakCells.has(r + ',' + c) && !G.step2Targets.some(t => t.r === r && t.c === c)) {
+                  el.style.background = 'rgba(231, 76, 60, 0.4)';
+                }
+                el.addEventListener('click', ((a, b) => () => doStep2(a, b))(r, c));
+              }
             }
           }
 
@@ -1081,7 +1285,7 @@
           const pi = pieceAt(r, c);
           if (pi !== -1) {
             const pe = makePieceEl(G.pieces[pi].player, '');
-            if (!cpuNow && G.phase === 'SELECT_PIECE' && G.pieces[pi].player === currentPlayer() && !isInSecuredTerritory(pi) && getStep1Targets(pi).length > 0) {
+            if (!cpuNow && G.phase === 'SELECT_PIECE' && canSelectPiece(pi)) {
               pe.classList.add('selectable');
               pe.addEventListener('click', ((ii) => (e) => { e.stopPropagation(); doSelectPiece(ii); })(pi));
             }
@@ -1171,27 +1375,39 @@
       const dot = `<span class="p-dot" style="background:${COLORS[cp]}"></span>`;
       let msg = '';
       const cpuLabel = cpuMode && cp === CPU_PLAYER ? ' (CPU)' : '';
+      const pName = NAMES(cp);
       switch (G.phase) {
         case 'PLACEMENT': {
           if (cpuMode && cp === CPU_PLAYER) {
-            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">思考中...</span>`;
+            msg = `${dot} ${pName}${cpuLabel} — <span class="phase">思考中...</span>`;
           } else {
-            const n = G.pieces.filter(p => p.player === cp).length - 2 + 1;
-            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">追加の駒を配置 (${n}/2)</span><br>空きマスをクリック`;
+            const placed = G.pieces.filter(p => p.player === cp).length;
+            const initCount = numPlayers === 3 ? 0 : 2;
+            const n = placed - initCount + 1;
+            msg = `${dot} ${pName}${cpuLabel} — <span class="phase">駒を配置 (${n}/2)</span><br>空きマスをクリック`;
           }
           break;
         }
         case 'SELECT_PIECE': {
           if (cpuMode && cp === CPU_PLAYER) {
-            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">思考中...</span>`;
+            msg = `${dot} ${pName}${cpuLabel} — <span class="phase">思考中...</span>`;
           } else {
-            msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">駒を選択</span><br>移動する駒をクリック`;
+            let extra = '';
+            if (G.wallBreaking) extra = '<br><span style="color:#e74c3c">🔨 壁破壊モード！壁を越えて移動できます</span>';
+            msg = `${dot} ${pName}${cpuLabel} — <span class="phase">駒を選択</span><br>移動する駒をクリック${extra}`;
           }
           break;
         }
-        case 'MOVE_STEP1': msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">移動先を選択</span><br>黄色のマスをクリック`; break;
-        case 'STEP1_WALL_OR_STEP2': msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">壁を設置 or 2歩目を選択</span><br>黄色の辺 or 黄色マスをクリック`; break;
-        case 'PLACE_WALL': msg = `${dot} ${NAMES[cp]}${cpuLabel} — <span class="phase">壁を設置</span><br>黄色の辺をクリック`; break;
+        case 'MOVE_STEP1': {
+          let extra = G.wallBreaking ? '（壁越え可能）' : '';
+          msg = `${dot} ${pName}${cpuLabel} — <span class="phase">移動先を選択${extra}</span><br>黄色のマスをクリック`;
+          if (G.wallBreaking && G.breakTargetWalls.length > 0) {
+            msg += '<br><span style="color:#e74c3c">赤マス: 壁を壊して移動</span>';
+          }
+          break;
+        }
+        case 'STEP1_WALL_OR_STEP2': msg = `${dot} ${pName}${cpuLabel} — <span class="phase">壁を設置 or 2歩目を選択</span><br>黄色の辺 or 黄色マスをクリック`; break;
+        case 'PLACE_WALL': msg = `${dot} ${pName}${cpuLabel} — <span class="phase">壁を設置</span><br>黄色の辺をクリック`; break;
         case 'GAME_OVER': msg = `<span class="phase">ゲーム終了！</span>`; break;
       }
       bar.innerHTML = msg;
@@ -1206,20 +1422,40 @@
         b.addEventListener('click', fn); el.appendChild(b);
       };
       if (G.phase === 'MOVE_STEP1') addBtn('選択解除', '', undoToSelect);
-      if (G.phase === 'STEP1_WALL_OR_STEP2') {
-        addBtn('戻る', '', undoToStep1);
+      if (G.phase === 'STEP1_WALL_OR_STEP2') addBtn('戻る', '', undoToStep1);
+      if (G.phase === 'PLACE_WALL') addBtn('戻る', '', undoFromWall);
+
+      // Wall break button (3-player, during SELECT_PIECE, not yet used)
+      if (numPlayers === 3 && G.phase === 'SELECT_PIECE' && !G.wallBreaking) {
+        const cp = currentPlayer();
+        if (!G.wallBreakUsed[cp]) {
+          addBtn('🔨 壁破壊を宣言', 'danger', activateWallBreak);
+        }
       }
-      if (G.phase === 'PLACE_WALL') {
-        addBtn('戻る', '', undoFromWall);
-      }
+
       if (!['PLACEMENT', 'GAME_OVER'].includes(G.phase)) {
         const sp = document.createElement('span');
         sp.style.cssText = 'color:#666;font-size:0.8rem;padding:6px 8px';
         const lvName = cpuMode ? ['初心者', '中級者', '上級者'][cpuLevel - 1] : '';
-        sp.textContent = `ターン ${Math.floor(G.gameTurn / 2) + 1}${cpuMode ? ' | CPU: ' + lvName : ''}`;
+        const turnNum = Math.floor(G.gameTurn / numPlayers) + 1;
+        sp.textContent = `ターン ${turnNum}${cpuMode ? ' | CPU: ' + lvName : ''}`;
         el.appendChild(sp);
       }
-      addBtn('リセット', 'primary', () => {
+
+      // Wall break status indicators (3-player)
+      if (numPlayers === 3 && !['PLACEMENT'].includes(G.phase)) {
+        const wbDiv = document.createElement('div');
+        wbDiv.style.cssText = 'width:100%;text-align:center;font-size:0.75rem;color:#888;margin-top:4px';
+        let wbHtml = '壁破壊: ';
+        for (let i = 0; i < 3; i++) {
+          const used = G.wallBreakUsed[i];
+          wbHtml += `<span style="color:${COLORS[i]}">${used ? '✗' : '●'}</span> `;
+        }
+        wbDiv.innerHTML = wbHtml;
+        el.appendChild(wbDiv);
+      }
+
+      addBtn('ゲームをリセットする', 'primary', () => {
         cancelCpu();
         document.getElementById('game').style.display = 'none';
         document.getElementById('setup').style.display = 'block';
@@ -1232,30 +1468,33 @@
       panel.style.display = 'block';
       const { territory } = calcTerritory();
       const mx = Math.max(...territory);
-      const draw = territory[0] === territory[1];
+      const winners = territory.filter(t => t === mx).length;
+      const isDraw = winners > 1;
       let html = '<h3>結果</h3>';
-      for (let i = 0; i < 2; i++) {
-        const w = !draw && territory[i] === mx;
-        html += `<div class="score-row ${w ? 'winner' : ''}">
+      for (let i = 0; i < numPlayers; i++) {
+        const w = territory[i] === mx;
+        const isWin = w && !isDraw;
+        html += `<div class="score-row ${isWin ? 'winner' : ''}">
             <span class="score-dot" style="background:${COLORS[i]}"></span>
-            ${NAMES[i]}: <strong>${territory[i]}マス</strong>${w ? ' 👑' : draw ? ' 🤝' : ''}
+            ${NAMES(i)}: <strong>${territory[i]}マス</strong>${isWin ? ' 👑' : (w && isDraw) ? ' 🤝' : ''}
         </div>`;
       }
-      const tot = territory[0] + territory[1];
+      const tot = territory.reduce((a, b) => a + b, 0);
       if (tot < BS * BS) html += `<div class="score-row" style="color:#555">未所有: ${BS * BS - tot}マス</div>`;
-      if (draw) html += `<div style="margin-top:8px;color:#f0c040">引き分け！</div>`;
+      if (isDraw) html += `<div style="margin-top:8px;color:#f0c040">引き分け！</div>`;
       panel.innerHTML = html;
       const b = document.createElement('button');
       b.className = 'ctrl-btn primary'; b.textContent = 'もう一度遊ぶ';
       b.style.marginTop = '12px';
-      b.addEventListener('click', () => startGame(cpuMode, cpuLevel));
+      b.addEventListener('click', () => startGame({ players: numPlayers, cpu: cpuMode, cpuLevel }));
       panel.appendChild(b);
     }
 
-    function startGame(cpu, level) {
+    function startGame(opts) {
       cancelCpu();
-      cpuMode = !!cpu;
-      cpuLevel = level || 2;
+      numPlayers = opts.players || 2;
+      cpuMode = !!opts.cpu;
+      cpuLevel = opts.cpuLevel || 2;
       computeSizes();
       G = newGame();
       document.getElementById('setup').style.display = 'none';
