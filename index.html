@@ -23,7 +23,8 @@
     }
 
     body {
-      background: #1a1a2e;
+      background: #3a3a3a;
+      background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
       color: #e0e0e0;
       font-family: 'Segoe UI', 'Meiryo', 'Yu Gothic', sans-serif;
       min-height: 100vh;
@@ -36,16 +37,29 @@
     }
 
     h1 {
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       margin: 16px 0 4px;
-      color: #f0c040;
+      color: #dfc870;
       text-align: center;
+      letter-spacing: 4px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 .title-badge {
+      display: inline-block;
+      background: #1a1a1a;
+      border: 1px solid #dfc870;
+      padding: 2px 16px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      color: #ccc;
       letter-spacing: 2px;
+      margin-bottom: 4px;
     }
 
     h1 small {
-      font-size: 0.7rem;
-      color: #aaa;
+      font-size: 0.65rem;
+      color: #999;
       letter-spacing: 1px;
     }
 
@@ -62,27 +76,27 @@
     }
 
     #setup h2 {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       margin-bottom: 24px;
-      color: #ccc;
+      color: #bbb;
     }
 
     .mode-btn {
       display: inline-block;
       margin: 8px 12px;
-      padding: 16px 36px;
-      font-size: 1.1rem;
-      border: 2px solid #f0c040;
-      border-radius: 12px;
-      background: transparent;
-      color: #f0c040;
+      padding: 14px 32px;
+      font-size: 1.05rem;
+      border: 2px solid #dfc870;
+      border-radius: 10px;
+      background: rgba(30, 30, 30, 0.6);
+      color: #dfc870;
       cursor: pointer;
       transition: all 0.2s;
     }
 
     .mode-btn:hover {
-      background: #f0c040;
-      color: #1a1a2e;
+      background: #dfc870;
+      color: #1a1a1a;
     }
 
     /* Game */
@@ -94,10 +108,11 @@
       text-align: center;
       margin: 8px 0 12px;
       padding: 10px 16px;
-      background: #16213e;
+      background: rgba(20, 20, 20, 0.85);
       border-radius: 10px;
       font-size: 0.95rem;
       line-height: 1.6;
+      border: 1px solid #555;
     }
 
     .p-dot {
@@ -111,7 +126,7 @@
     }
 
     .phase {
-      color: #f0c040;
+      color: #dfc870;
       font-weight: bold;
     }
 
@@ -159,23 +174,23 @@
 
     #board {
       display: grid;
-      background: #8B6914;
-      border: 4px solid #5a4510;
-      border-radius: 6px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      background: #5c3d1e;
+      border: 8px solid #6b4423;
+      border-radius: 4px;
+      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.3);
       position: relative;
     }
 
     .cell {
-      background: #c4975a;
-      border-radius: 3px;
+      background: #a07850;
+      border-radius: 2px;
       position: relative;
       cursor: default;
       transition: background 0.15s;
     }
 
     .cell:hover {
-      background: #d4a76a;
+      background: #b08860;
     }
 
     .cell.highlight {
@@ -188,15 +203,15 @@
     }
 
     .cell.territory-0 {
-      background: rgba(231, 76, 60, 0.3);
+      background: rgba(200, 60, 50, 0.35);
     }
 
     .cell.territory-1 {
-      background: rgba(52, 152, 219, 0.3);
+      background: rgba(50, 130, 200, 0.35);
     }
 
     .cell.territory-2 {
-      background: rgba(46, 204, 113, 0.3);
+      background: rgba(220, 180, 40, 0.35);
     }
 
     .piece {
@@ -205,8 +220,8 @@
       left: 50%;
       transform: translate(-50%, -50%);
       border-radius: 50%;
-      border: 2px solid rgba(0, 0, 0, 0.3);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(0, 0, 0, 0.25);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.25), inset 0 3px 6px rgba(255, 255, 255, 0.25);
       z-index: 5;
       transition: all 0.15s;
     }
@@ -229,32 +244,31 @@
     }
 
     .cell.cpu-from {
-      background: rgba(52, 152, 219, 0.25);
+      background: rgba(255, 255, 255, 0.15);
     }
 
     .cell.cpu-to {
-      background: rgba(52, 152, 219, 0.4);
+      background: rgba(255, 255, 255, 0.25);
     }
 
     .wall-h.cpu-wall,
     .wall-v.cpu-wall {
-      background: #f0c040;
-      box-shadow: 0 0 8px rgba(240, 192, 64, 0.6);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
     }
 
     .cell.cpu-placed {
-      background: rgba(52, 152, 219, 0.4);
+      background: rgba(255, 255, 255, 0.25);
     }
 
     @keyframes pulse {
 
       0%,
       100% {
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.25), inset 0 3px 6px rgba(255, 255, 255, 0.25);
       }
 
       50% {
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 10px 3px rgba(255, 255, 255, 0.4), inset 0 -2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), 0 0 12px 4px rgba(255, 255, 255, 0.4), inset 0 -3px 6px rgba(0, 0, 0, 0.25), inset 0 3px 6px rgba(255, 255, 255, 0.25);
       }
     }
 
@@ -262,30 +276,31 @@
     .wall-v {
       background: transparent;
       cursor: default;
-      transition: background 0.15s;
+      transition: background 0.15s, box-shadow 0.15s;
       z-index: 2;
       border-radius: 2px;
     }
 
     .wall-h.placed,
     .wall-v.placed {
-      background: #2d3436;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+      border-radius: 2px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
     }
 
     .wall-h.available,
     .wall-v.available {
-      background: rgba(240, 192, 64, 0.3);
+      background: rgba(255, 255, 255, 0.25);
       cursor: pointer;
+      border-radius: 2px;
     }
 
     .wall-h.available:hover,
     .wall-v.available:hover {
-      background: rgba(240, 192, 64, 0.7);
+      background: rgba(255, 255, 255, 0.5);
     }
 
     .corner {
-      background: #7a5c1e;
+      background: #4a3218;
       border-radius: 1px;
     }
 
@@ -303,7 +318,7 @@
       padding: 8px 18px;
       border: 1px solid #555;
       border-radius: 8px;
-      background: #16213e;
+      background: rgba(20, 20, 20, 0.7);
       color: #ddd;
       font-size: 0.85rem;
       cursor: pointer;
@@ -311,18 +326,18 @@
     }
 
     .ctrl-btn:hover {
-      background: #1f3460;
-      border-color: #777;
+      background: rgba(60, 60, 60, 0.8);
+      border-color: #888;
     }
 
     .ctrl-btn.primary {
-      border-color: #f0c040;
-      color: #f0c040;
+      border-color: #dfc870;
+      color: #dfc870;
     }
 
     .ctrl-btn.primary:hover {
-      background: #f0c040;
-      color: #1a1a2e;
+      background: #dfc870;
+      color: #1a1a1a;
     }
 
     .ctrl-btn.confirm {
@@ -361,13 +376,14 @@
       display: none;
       margin-top: 12px;
       padding: 16px;
-      background: #16213e;
+      background: rgba(20, 20, 20, 0.85);
       border-radius: 10px;
       text-align: center;
+      border: 1px solid #555;
     }
 
     #score-panel h3 {
-      color: #f0c040;
+      color: #dfc870;
       margin-bottom: 10px;
       font-size: 1.1rem;
     }
@@ -390,7 +406,7 @@
     }
 
     .winner {
-      color: #f0c040;
+      color: #dfc870;
       font-weight: bold;
     }
 
@@ -399,16 +415,17 @@
       display: none;
       margin-top: 8px;
       padding: 14px;
-      background: #16213e;
+      background: rgba(20, 20, 20, 0.85);
       border-radius: 10px;
       font-size: 0.82rem;
       line-height: 1.7;
       color: #bbb;
       text-align: left;
+      border: 1px solid #555;
     }
 
     #rules h4 {
-      color: #f0c040;
+      color: #dfc870;
       margin: 8px 0 4px;
     }
 
@@ -420,7 +437,7 @@
 
 <body>
   <div id="app">
-    <h1>壁囲碁<br><small>Wall Go — Devil's Plan</small></h1>
+    <h1><span class="title-badge">Devil's Plan Season 2</span><br>壁囲碁<br><small>Wall Go</small></h1>
 
     <div id="setup">
       <h2>Devil's Plan シーズン2 より</h2>
@@ -435,6 +452,12 @@
       <button class="mode-btn" onclick="startGame({players:2,cpu:true,cpuLevel:1})">初心者</button>
       <button class="mode-btn" onclick="startGame({players:2,cpu:true,cpuLevel:2})">中級者</button>
       <button class="mode-btn" onclick="startGame({players:2,cpu:true,cpuLevel:3})">上級者</button>
+      <div style="margin-top:12px">
+        <span style="color:#aaa;font-size:0.9rem">▼ CPU対戦（3人）</span>
+      </div>
+      <button class="mode-btn" onclick="startGame({players:3,cpu:true,cpuLevel:1})">初心者</button>
+      <button class="mode-btn" onclick="startGame({players:3,cpu:true,cpuLevel:2})">中級者</button>
+      <button class="mode-btn" onclick="startGame({players:3,cpu:true,cpuLevel:3})">上級者</button>
       <div style="text-align:center;margin-top:16px">
         <button class="ctrl-btn" onclick="toggleRules()">ルール説明</button>
       </div>
@@ -507,11 +530,11 @@
     }
     computeSizes();
 
-    const COLORS = ['#e74c3c', '#3498db', '#2ecc71'];
+    const COLORS = ['#e74c3c', '#3498db', '#f1c40f'];
     const NAMES_2 = ['先手（赤）', '後手（青）'];
-    const NAMES_3 = ['1番（赤）', '2番（青）', '3番（緑）'];
+    const NAMES_3 = ['1番（赤）', '2番（青）', '3番（黄）'];
     const COL_LABELS = 'ABCDEFG';
-    const CPU_PLAYER = 1;
+    const HUMAN_PLAYER = 0;
     const CPU_DELAY = 500;
 
     let numPlayers = 2;
@@ -521,6 +544,7 @@
     let cpuAnimating = false;
     let cpuHighlight = null;
 
+    function isCpuPlayer(p) { return cpuMode && p !== HUMAN_PLAYER; }
     function NAMES(i) { return numPlayers === 3 ? NAMES_3[i] : NAMES_2[i]; }
 
     // Initial pre-placed pieces (2-player only)
@@ -540,6 +564,8 @@
         pieces: is3 ? [] : INIT_PIECES_2.map(p => ({ ...p })),
         hWalls: make2D(BS - 1, BS, false),
         vWalls: make2D(BS, BS - 1, false),
+        hWallOwner: make2D(BS - 1, BS, -1),
+        vWallOwner: make2D(BS, BS - 1, -1),
         phase: 'PLACEMENT',
         placementTurn: 0,
         placementTotal: is3 ? 6 : 4,
@@ -797,10 +823,11 @@
       const p = G.pieces[G.selIdx];
       G.origR = p.row; G.origC = p.col;
 
-      // Break the wall if needed
+      // Break the wall if needed (in doStep1)
       if (brokenWall) {
-        if (brokenWall.type === 'h') G.hWalls[brokenWall.wr][brokenWall.wc] = false;
-        else G.vWalls[brokenWall.wr][brokenWall.wc] = false;
+        brokenWall.origOwner = getWallOwner(brokenWall.type, brokenWall.wr, brokenWall.wc);
+        if (brokenWall.type === 'h') { G.hWalls[brokenWall.wr][brokenWall.wc] = false; G.hWallOwner[brokenWall.wr][brokenWall.wc] = -1; }
+        else { G.vWalls[brokenWall.wr][brokenWall.wc] = false; G.vWallOwner[brokenWall.wr][brokenWall.wc] = -1; }
         G.brokenWall = brokenWall;
       }
 
@@ -847,8 +874,9 @@
       }
 
       if (brokenWall) {
-        if (brokenWall.type === 'h') G.hWalls[brokenWall.wr][brokenWall.wc] = false;
-        else G.vWalls[brokenWall.wr][brokenWall.wc] = false;
+        brokenWall.origOwner = getWallOwner(brokenWall.type, brokenWall.wr, brokenWall.wc);
+        if (brokenWall.type === 'h') { G.hWalls[brokenWall.wr][brokenWall.wc] = false; G.hWallOwner[brokenWall.wr][brokenWall.wc] = -1; }
+        else { G.vWalls[brokenWall.wr][brokenWall.wc] = false; G.vWallOwner[brokenWall.wr][brokenWall.wc] = -1; }
         G.brokenWall = brokenWall;
       }
 
@@ -861,8 +889,9 @@
     function doPlaceWallFromStep1(type, wr, wc) {
       if (G.phase !== 'STEP1_WALL_OR_STEP2') return;
       if (!G.validWalls.some(w => w.type === type && w.wr === wr && w.wc === wc)) return;
-      if (type === 'h') G.hWalls[wr][wc] = true;
-      else G.vWalls[wr][wc] = true;
+      const cp = currentPlayer();
+      if (type === 'h') { G.hWalls[wr][wc] = true; G.hWallOwner[wr][wc] = cp; }
+      else { G.vWalls[wr][wc] = true; G.vWallOwner[wr][wc] = cp; }
       endTurn();
     }
 
@@ -875,8 +904,9 @@
     function doPlaceWall(type, wr, wc) {
       if (G.phase !== 'PLACE_WALL') return;
       if (!G.validWalls.some(w => w.type === type && w.wr === wr && w.wc === wc)) return;
-      if (type === 'h') G.hWalls[wr][wc] = true;
-      else G.vWalls[wr][wc] = true;
+      const cp = currentPlayer();
+      if (type === 'h') { G.hWalls[wr][wc] = true; G.hWallOwner[wr][wc] = cp; }
+      else { G.vWalls[wr][wc] = true; G.vWallOwner[wr][wc] = cp; }
       endTurn();
     }
 
@@ -892,8 +922,9 @@
       if (G.phase === 'STEP1_WALL_OR_STEP2') {
         // Restore broken wall if any
         if (G.brokenWall) {
-          if (G.brokenWall.type === 'h') G.hWalls[G.brokenWall.wr][G.brokenWall.wc] = true;
-          else G.vWalls[G.brokenWall.wr][G.brokenWall.wc] = true;
+          const bw = G.brokenWall;
+          if (bw.type === 'h') { G.hWalls[bw.wr][bw.wc] = true; G.hWallOwner[bw.wr][bw.wc] = bw.origOwner != null ? bw.origOwner : -1; }
+          else { G.vWalls[bw.wr][bw.wc] = true; G.vWallOwner[bw.wr][bw.wc] = bw.origOwner != null ? bw.origOwner : -1; }
           G.brokenWall = null;
         }
         G.pieces[G.selIdx].row = G.origR;
@@ -967,9 +998,9 @@
       render();
     }
 
-    // ===== CPU AI (2-player only) =====
+    // ===== CPU AI =====
     function isCpuTurn() {
-      return cpuMode && numPlayers === 2 && currentPlayer() === CPU_PLAYER && G.phase !== 'GAME_OVER';
+      return cpuMode && isCpuPlayer(currentPlayer()) && G.phase !== 'GAME_OVER';
     }
 
     function scheduleCpuTurn() {
@@ -986,12 +1017,16 @@
       cpuHighlight = null;
     }
 
-    function setWall(w, val) {
-      if (w.type === 'h') G.hWalls[w.wr][w.wc] = val;
-      else G.vWalls[w.wr][w.wc] = val;
+    function setWall(w, val, owner) {
+      if (w.type === 'h') { G.hWalls[w.wr][w.wc] = val; G.hWallOwner[w.wr][w.wc] = val ? (owner != null ? owner : -1) : -1; }
+      else { G.vWalls[w.wr][w.wc] = val; G.vWallOwner[w.wr][w.wc] = val ? (owner != null ? owner : -1) : -1; }
     }
 
-    function evalBoard() {
+    function getWallOwner(type, wr, wc) {
+      return type === 'h' ? G.hWallOwner[wr][wc] : G.vWallOwner[wr][wc];
+    }
+
+    function evalBoardFor(cpuP) {
       const dist = make2D(BS, BS, -1);
       const cellOwner = make2D(BS, BS, -1);
       const q = [];
@@ -1026,8 +1061,8 @@
       let territory = 0;
       for (let r = 0; r < BS; r++) {
         for (let c = 0; c < BS; c++) {
-          if (cellOwner[r][c] === CPU_PLAYER) territory++;
-          else if (cellOwner[r][c] === 1 - CPU_PLAYER) territory--;
+          if (cellOwner[r][c] === cpuP) territory++;
+          else if (cellOwner[r][c] !== -1) territory--;
         }
       }
 
@@ -1039,17 +1074,17 @@
           if (pi !== -1) ps.add(G.pieces[pi].player);
         }
         if (ps.size === 1) {
-          securedBonus += ([...ps][0] === CPU_PLAYER ? 1 : -1) * comp.length;
+          securedBonus += ([...ps][0] === cpuP ? 1 : -1) * comp.length;
         }
       }
 
-      let cpuMob = 0, humMob = 0;
+      let myMob = 0, oppMob = 0;
       for (let i = 0; i < G.pieces.length; i++) {
         const mob = getStep1Targets(i).length;
-        if (G.pieces[i].player === CPU_PLAYER) cpuMob += mob; else humMob += mob;
+        if (G.pieces[i].player === cpuP) myMob += mob; else oppMob += mob;
       }
 
-      return territory + securedBonus + 0.5 * (cpuMob - humMob);
+      return territory + securedBonus + 0.5 * (myMob - oppMob);
     }
 
     function enumerateMoves(player) {
@@ -1090,14 +1125,14 @@
       if (snap.wall) setWall(snap.wall, false);
     }
 
-    function pickBestMove() {
-      const moves = enumerateMoves(CPU_PLAYER);
+    function pickBestMove(cpuP) {
+      const moves = enumerateMoves(cpuP);
       if (moves.length === 0) return null;
 
       if (cpuLevel === 1) {
         const scored = moves.map(m => {
           const snap = applyMove(m);
-          const s = evalBoard() + Math.random() * 8;
+          const s = evalBoardFor(cpuP) + Math.random() * 8;
           undoMove(snap);
           return { m, s };
         });
@@ -1110,28 +1145,29 @@
         let best = -Infinity, bestM = null;
         for (const m of moves) {
           const snap = applyMove(m);
-          const s = evalBoard() + Math.random() * 0.01;
+          const s = evalBoardFor(cpuP) + Math.random() * 0.01;
           undoMove(snap);
           if (s > best) { best = s; bestM = m; }
         }
         return bestM;
       }
 
+      // Advanced: 2-ply minimax — consider worst-case among all opponents
       let best = -Infinity, bestM = null;
       for (const m of moves) {
         const snap = applyMove(m);
-        const oppMoves = enumerateMoves(1 - CPU_PLAYER);
         let worstForCpu = Infinity;
-        if (oppMoves.length === 0) {
-          worstForCpu = evalBoard();
-        } else {
+        for (let opp = 0; opp < numPlayers; opp++) {
+          if (opp === cpuP) continue;
+          const oppMoves = enumerateMoves(opp);
           for (const om of oppMoves) {
             const oSnap = applyMove(om);
-            const s = evalBoard();
+            const s = evalBoardFor(cpuP);
             undoMove(oSnap);
             if (s < worstForCpu) worstForCpu = s;
           }
         }
+        if (worstForCpu === Infinity) worstForCpu = evalBoardFor(cpuP);
         undoMove(snap);
         const score = worstForCpu + Math.random() * 0.01;
         if (score > best) { best = score; bestM = m; }
@@ -1140,11 +1176,13 @@
     }
 
     function cpuTurn() {
+      if (!isCpuTurn()) return;
       if (G.phase === 'PLACEMENT') cpuPlacement();
       else if (G.phase === 'SELECT_PIECE') cpuMoveAndWall();
     }
 
     function cpuPlacement() {
+      const cpuP = currentPlayer();
       let bestR = -1, bestC = -1;
       if (cpuLevel === 1) {
         const empty = [];
@@ -1155,8 +1193,8 @@
         for (let r = 0; r < BS; r++) {
           for (let c = 0; c < BS; c++) {
             if (pieceAt(r, c) !== -1) continue;
-            G.pieces.push({ player: CPU_PLAYER, row: r, col: c });
-            const s = evalBoard() + Math.random() * 0.01;
+            G.pieces.push({ player: cpuP, row: r, col: c });
+            const s = evalBoardFor(cpuP) + Math.random() * 0.01;
             G.pieces.pop();
             if (s > bestScore) { bestScore = s; bestR = r; bestC = c; }
           }
@@ -1165,12 +1203,14 @@
       if (bestR >= 0) {
         cpuHighlight = { fromR: -1, fromC: -1, toR: bestR, toC: bestC, wall: null };
         doPlacement(bestR, bestC);
+        if (cpuTimerId) clearTimeout(cpuTimerId);
         cpuTimerId = setTimeout(() => { cpuTimerId = null; cpuHighlight = null; render(); }, 800);
       }
     }
 
     function cpuMoveAndWall() {
-      const bestMove = pickBestMove();
+      const cpuP = currentPlayer();
+      const bestMove = pickBestMove(cpuP);
       if (!bestMove) return;
       cpuAnimating = true;
       const m = bestMove;
@@ -1186,7 +1226,7 @@
         cpuTimerId = setTimeout(() => {
           cpuTimerId = null;
           if (m.wall) {
-            setWall(m.wall, true);
+            setWall(m.wall, true, cpuP);
             cpuHighlight = { fromR: m.oR, fromC: m.oC, toR: m.tr, toC: m.tc, wall: m.wall };
             render();
           }
@@ -1306,6 +1346,8 @@
         el.style.gridColumn = (c * 2 + 1).toString();
         if (G.hWalls[r][c]) {
           el.classList.add('placed');
+          const wo = G.hWallOwner[r][c];
+          if (wo >= 0) el.style.background = COLORS[wo];
           if (cpuHighlight && cpuHighlight.wall && cpuHighlight.wall.type === 'h' && cpuHighlight.wall.wr === r && cpuHighlight.wall.wc === c) el.classList.add('cpu-wall');
         }
         else if ((G.phase === 'PLACE_WALL' || G.phase === 'STEP1_WALL_OR_STEP2') && G.validWalls.some(w => w.type === 'h' && w.wr === r && w.wc === c)) {
@@ -1327,6 +1369,8 @@
         el.style.gridColumn = (c * 2 + 2).toString();
         if (G.vWalls[r][c]) {
           el.classList.add('placed');
+          const wo = G.vWallOwner[r][c];
+          if (wo >= 0) el.style.background = COLORS[wo];
           if (cpuHighlight && cpuHighlight.wall && cpuHighlight.wall.type === 'v' && cpuHighlight.wall.wr === r && cpuHighlight.wall.wc === c) el.classList.add('cpu-wall');
         }
         else if ((G.phase === 'PLACE_WALL' || G.phase === 'STEP1_WALL_OR_STEP2') && G.validWalls.some(w => w.type === 'v' && w.wr === r && w.wc === c)) {
@@ -1375,11 +1419,11 @@
       const cp = currentPlayer();
       const dot = `<span class="p-dot" style="background:${COLORS[cp]}"></span>`;
       let msg = '';
-      const cpuLabel = cpuMode && cp === CPU_PLAYER ? ' (CPU)' : '';
+      const cpuLabel = isCpuPlayer(cp) ? ' (CPU)' : '';
       const pName = NAMES(cp);
       switch (G.phase) {
         case 'PLACEMENT': {
-          if (cpuMode && cp === CPU_PLAYER) {
+          if (isCpuPlayer(cp)) {
             msg = `${dot} ${pName}${cpuLabel} — <span class="phase">思考中...</span>`;
           } else {
             const placed = G.pieces.filter(p => p.player === cp).length;
@@ -1390,7 +1434,7 @@
           break;
         }
         case 'SELECT_PIECE': {
-          if (cpuMode && cp === CPU_PLAYER) {
+          if (isCpuPlayer(cp)) {
             msg = `${dot} ${pName}${cpuLabel} — <span class="phase">思考中...</span>`;
           } else {
             let extra = '';
@@ -1426,8 +1470,8 @@
       if (G.phase === 'STEP1_WALL_OR_STEP2') addBtn('戻る', '', undoToStep1);
       if (G.phase === 'PLACE_WALL') addBtn('戻る', '', undoFromWall);
 
-      // Wall break button (3-player, during SELECT_PIECE, not yet used)
-      if (numPlayers === 3 && G.phase === 'SELECT_PIECE' && !G.wallBreaking) {
+      // Wall break button (3-player, during SELECT_PIECE, not yet used, human only)
+      if (numPlayers === 3 && G.phase === 'SELECT_PIECE' && !G.wallBreaking && !isCpuPlayer(currentPlayer())) {
         const cp = currentPlayer();
         if (!G.wallBreakUsed[cp]) {
           addBtn('🔨 壁破壊を宣言', 'danger', activateWallBreak);
