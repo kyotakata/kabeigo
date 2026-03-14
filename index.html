@@ -138,40 +138,6 @@
       margin: 0 auto;
     }
 
-    #row-labels {
-      display: flex;
-      flex-direction: column;
-      margin-right: 4px;
-    }
-
-    #row-labels span {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      color: #888;
-      font-weight: bold;
-    }
-
-    #col-labels {
-      display: flex;
-    }
-
-    #col-labels span {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      color: #888;
-      font-weight: bold;
-    }
-
-    #board-outer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
     #board {
       display: grid;
       background: #5c3d1e;
@@ -505,11 +471,7 @@
     <div id="game">
       <div id="status-bar"></div>
       <div id="board-wrap">
-        <div id="row-labels"></div>
-        <div id="board-outer">
-          <div id="board"></div>
-          <div id="col-labels"></div>
-        </div>
+        <div id="board"></div>
       </div>
       <div id="controls"></div>
       <div id="score-panel"></div>
@@ -522,9 +484,9 @@
     let CELL_PX = 56, WALL_PX = 12, PIECE_PX = 38;
 
     function computeSizes() {
-      const available = Math.min(window.innerWidth, 720) - 48;
-      const maxCell = Math.floor((available - (BS - 1) * 8 - 8) / BS);
-      CELL_PX = Math.max(36, Math.min(56, maxCell));
+      const available = Math.min(window.innerWidth, 720) - 24;
+      const maxCell = Math.floor((available - (BS - 1) * 12 - 16) / BS);
+      CELL_PX = Math.max(36, Math.min(60, maxCell));
       WALL_PX = CELL_PX <= 42 ? 10 : 12;
       PIECE_PX = Math.round(CELL_PX * 0.68);
     }
@@ -533,7 +495,6 @@
     const COLORS = ['#e74c3c', '#3498db', '#f1c40f'];
     const NAMES_2 = ['先手（赤）', '後手（青）'];
     const NAMES_3 = ['1番（赤）', '2番（青）', '3番（黄）'];
-    const COL_LABELS = 'ABCDEFG';
     const HUMAN_PLAYER = 0;
     const CPU_DELAY = 500;
 
@@ -973,6 +934,14 @@
       render();
     }
 
+    function cancelWallBreak() {
+      const cp = currentPlayer();
+      if (!G.wallBreaking || G.phase !== 'SELECT_PIECE') return;
+      G.wallBreakUsed[cp] = false;
+      G.wallBreaking = false;
+      render();
+    }
+
     function endTurn() {
       G.selIdx = -1;
       G.origR = G.origC = G.intR = G.intC = -1;
@@ -1392,26 +1361,6 @@
         el.style.gridColumn = (c * 2 + 2).toString();
         board.appendChild(el);
       }
-
-      // Labels
-      const rl = document.getElementById('row-labels');
-      rl.innerHTML = '';
-      for (let r = BS - 1; r >= 0; r--) {
-        const sp = document.createElement('span');
-        sp.textContent = (r + 1).toString();
-        sp.style.height = CELL_PX + 'px';
-        if (r > 0) sp.style.marginBottom = WALL_PX + 'px';
-        rl.appendChild(sp);
-      }
-      const cl = document.getElementById('col-labels');
-      cl.innerHTML = '';
-      for (let c = 0; c < BS; c++) {
-        const sp = document.createElement('span');
-        sp.textContent = COL_LABELS[c];
-        sp.style.width = CELL_PX + 'px';
-        if (c < BS - 1) sp.style.marginRight = WALL_PX + 'px';
-        cl.appendChild(sp);
-      }
     }
 
     function renderStatus() {
@@ -1470,10 +1419,12 @@
       if (G.phase === 'STEP1_WALL_OR_STEP2') addBtn('戻る', '', undoToStep1);
       if (G.phase === 'PLACE_WALL') addBtn('戻る', '', undoFromWall);
 
-      // Wall break button (3-player, during SELECT_PIECE, not yet used, human only)
-      if (numPlayers === 3 && G.phase === 'SELECT_PIECE' && !G.wallBreaking && !isCpuPlayer(currentPlayer())) {
+      // Wall break button (3-player, during SELECT_PIECE, human only)
+      if (numPlayers === 3 && G.phase === 'SELECT_PIECE' && !isCpuPlayer(currentPlayer())) {
         const cp = currentPlayer();
-        if (!G.wallBreakUsed[cp]) {
+        if (G.wallBreaking) {
+          addBtn('🔨 壁破壊を解除', 'danger', cancelWallBreak);
+        } else if (!G.wallBreakUsed[cp]) {
           addBtn('🔨 壁破壊を宣言', 'danger', activateWallBreak);
         }
       }
