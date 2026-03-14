@@ -519,13 +519,13 @@
   <script>
     // ===== Constants =====
     const BS = 7;
-    let CELL_PX = 56, WALL_PX = 8, PIECE_PX = 38;
+    let CELL_PX = 56, WALL_PX = 12, PIECE_PX = 38;
 
     function computeSizes() {
       const available = Math.min(window.innerWidth, 720) - 48;
       const maxCell = Math.floor((available - (BS - 1) * 8 - 8) / BS);
       CELL_PX = Math.max(36, Math.min(56, maxCell));
-      WALL_PX = CELL_PX <= 42 ? 6 : 8;
+      WALL_PX = CELL_PX <= 42 ? 10 : 12;
       PIECE_PX = Math.round(CELL_PX * 0.68);
     }
     computeSizes();
